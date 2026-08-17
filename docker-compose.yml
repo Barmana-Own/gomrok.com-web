@@ -1,0 +1,21 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: ${MYSQL_CONTAINER_NAME:-gomrok-mysql}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-gomrok_dev_only_change_me}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-gomrok}
+      TZ: Asia/Tehran
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - gomrok_mysql_data:/var/lib/mysql
+      - ${MYSQL_SCHEMA_PATH:-./server/schema.sql}:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-name-resolve
+
+volumes:
+  gomrok_mysql_data:

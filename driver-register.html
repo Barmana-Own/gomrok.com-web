@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ثبت‌نام راننده در سامانه حمل‌ونقل گمرکی راهکاران گمرک" />
+    <title>ثبت‌نام راننده | راهکاران گمرک</title>
+    <link rel="stylesheet" href="driver-register.css" />
+  </head>
+  <body>
+    <main class="register-shell">
+      <header class="register-header">
+        <a class="register-brand" href="/" aria-label="بازگشت به ورود">
+          <span class="register-brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <path d="M24 5 40 11v11c0 10.2-6.6 17.9-16 21C14.6 39.9 8 32.2 8 22V11L24 5Z" fill="currentColor" opacity=".16" />
+              <path d="M24 9.5 36 14v8.1c0 7.7-4.6 13.4-12 16.2-7.4-2.8-12-8.5-12-16.2V14l12-4.5Z" stroke="currentColor" stroke-width="2.2" />
+              <path d="m16.7 25 4.3 4.3 10.5-11" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span>
+            <strong>راهکاران گمرک</strong>
+            <small>سامانه حمل‌ونقل یکپارچه</small>
+          </span>
+        </a>
+        <span class="register-header__secure"><i></i> ثبت‌نام امن</span>
+      </header>
+
+      <section class="register-main" aria-labelledby="register-title">
+        <a class="register-back" href="/">
+          <span aria-hidden="true">→</span>
+          بازگشت به ورود
+        </a>
+
+        <div class="register-progress" aria-label="مرحله ثبت‌نام">
+          <div class="register-progress__step is-active">
+            <b>۱</b>
+            <span>اطلاعات راننده</span>
+          </div>
+          <span class="register-progress__line" aria-hidden="true"></span>
+          <div class="register-progress__step">
+            <b>۲</b>
+            <span>تأیید هویت</span>
+          </div>
+        </div>
+
+        <div class="register-heading">
+          <p class="register-eyebrow"><span></span> ثبت‌نام راننده</p>
+          <h1 id="register-title">حساب راننده‌ات را بساز</h1>
+          <p>مشخصاتت را وارد کن تا مسیر همکاری را سریع و امن شروع کنیم.</p>
+        </div>
+
+        <div class="register-info" role="note">
+          <span class="register-info__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7" />
+              <path d="M12 10.7v5M12 7.7v.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </span>
+          <span><strong>احراز هویت مرحله‌ای</strong><small>اطلاعاتت فقط برای بررسی صلاحیت راننده استفاده می‌شود.</small></span>
+        </div>
+
+        <form class="register-form" id="driver-register-form" novalidate>
+          <fieldset class="register-section">
+            <legend>اطلاعات هویتی</legend>
+            <p>مطابق کارت ملی وارد شود.</p>
+
+            <div class="register-grid register-grid--two">
+              <label class="register-field">
+                <span>نام</span>
+                <span class="register-control">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M5.5 19.5c.7-3 2.9-4.6 6.5-4.6s5.8 1.6 6.5 4.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                  <input name="firstName" type="text" autocomplete="given-name" placeholder="امیر" required />
+                </span>
+                <small class="register-error"></small>
+              </label>
+
+              <label class="register-field">
+                <span>نام خانوادگی</span>
+                <span class="register-control">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M5.5 19.5c.7-3 2.9-4.6 6.5-4.6s5.8 1.6 6.5 4.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                  <input name="lastName" type="text" autocomplete="family-name" placeholder="رضایی" required />
+                </span>
+                <small class="register-error"></small>
+              </label>
+            </div>
+
+            <div class="register-grid register-grid--two">
+              <label class="register-field">
+                <span>کد ملی</span>
+              <span class="register-control">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="4.2" y="5.5" width="15.6" height="13" rx="2" stroke="currentColor" stroke-width="1.7" />
+                  <circle cx="8.3" cy="11.2" r="1.6" stroke="currentColor" stroke-width="1.5" />
+                  <path d="M6.4 15.5c.4-1.1 1-1.7 1.9-1.7s1.5.6 1.9 1.7M12.5 10h4.6M12.5 13h4.6M12.5 16h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                </svg>
+                <input name="nationalId" type="text" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="کد ملی ۱۰ رقمی" required />
+              </span>
+              <small class="register-error"></small>
+              </label>
+
+              <label class="register-field">
+                <span>شماره موبایل</span>
+              <span class="register-control">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="7" y="3.6" width="10" height="16.8" rx="2.1" stroke="currentColor" stroke-width="1.7" />
+                  <path d="M10 6h4M11 17.2h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                </svg>
+                <input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="۰۹۱۲۱۲۳۴۵۶۷" required />
+              </span>
+              <small class="register-error"></small>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="register-section">
+            <legend>محل سکونت</legend>
+            <p>استان و شهر محل سکونتت را از فهرست ایران انتخاب کن.</p>
+
+            <div class="register-grid register-grid--two">
+              <label class="register-field">
+                <span>استان</span>
+                <div class="register-control register-custom-select" data-custom-select="province">
+                  <select class="register-native-select" name="province" id="driver-province" autocomplete="address-level1" required tabindex="-1" aria-hidden="true">
+                    <option value="">انتخاب استان</option>
+                  </select>
+                  <button class="register-custom-select__trigger" type="button" data-select-trigger="province" aria-haspopup="listbox" aria-expanded="false" aria-controls="province-menu">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 21s6-5.3 6-11a6 6 0 1 0-12 0c0 5.7 6 11 6 11Z" stroke="currentColor" stroke-width="1.7" />
+                      <circle cx="12" cy="10" r="2" stroke="currentColor" stroke-width="1.6" />
+                    </svg>
+                    <span class="register-custom-select__value" data-select-value="province">انتخاب استان</span>
+                    <span class="register-custom-select__chevron" aria-hidden="true">⌄</span>
+                  </button>
+                  <div class="register-custom-select__menu" id="province-menu" data-select-menu="province" role="listbox" hidden></div>
+                </div>
+                <small class="register-error"></small>
+              </label>
+
+              <label class="register-field">
+                <span>شهر</span>
+                <div class="register-control register-custom-select" data-custom-select="city">
+                  <select class="register-native-select" name="city" id="driver-city" autocomplete="address-level2" required disabled tabindex="-1" aria-hidden="true">
+                    <option value="">ابتدا استان را انتخاب کن</option>
+                  </select>
+                  <button class="register-custom-select__trigger" type="button" data-select-trigger="city" aria-haspopup="listbox" aria-expanded="false" aria-controls="city-menu" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 21s6-5.3 6-11a6 6 0 1 0-12 0c0 5.7 6 11 6 11Z" stroke="currentColor" stroke-width="1.7" />
+                      <circle cx="12" cy="10" r="2" stroke="currentColor" stroke-width="1.6" />
+                    </svg>
+                    <span class="register-custom-select__value" data-select-value="city">ابتدا استان را انتخاب کن</span>
+                    <span class="register-custom-select__chevron" aria-hidden="true">⌄</span>
+                  </button>
+                  <div class="register-custom-select__menu" id="city-menu" data-select-menu="city" role="listbox" hidden></div>
+                </div>
+                <small class="register-error"></small>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="register-section" hidden aria-hidden="true">
+            <legend>اطلاعات کاری</legend>
+            <p>برای تطبیق راننده و وسیله‌ی نقلیه.</p>
+
+            <label class="register-field">
+              <span>شماره گواهینامه</span>
+              <span class="register-control">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M7 4.5h8.5L18.5 7v12.5H7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+                  <path d="M15.5 4.8V7h2.2M9.5 11h6M9.5 14h6M9.5 17h3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                </svg>
+                <input name="licenseNumber" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="شماره گواهینامه" required disabled />
+              </span>
+              <small class="register-error"></small>
+            </label>
+
+            <div class="register-grid register-grid--two">
+              <label class="register-field">
+                <span>نوع وسیله</span>
+                <span class="register-control">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M3.5 6h11v9h-11zM14.5 9h3.2l3 3v3h-6.2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                    <path d="M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="currentColor" stroke-width="1.5" />
+                  </svg>
+                  <select name="vehicleType" required disabled>
+                    <option value="">انتخاب کن</option>
+                    <option value="truck">کامیون</option>
+                    <option value="trailer">تریلی</option>
+                    <option value="pickup">کامیونت</option>
+                  </select>
+                </span>
+                <small class="register-error"></small>
+              </label>
+
+              <label class="register-field">
+                <span>پلاک</span>
+                <span class="register-control">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M3.5 6h11v9h-11zM14.5 9h3.2l3 3v3h-6.2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                    <path d="M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 19a2 2 0 1 0 0-4 2 2 0 1 0 0 4Z" stroke="currentColor" stroke-width="1.5" />
+                  </svg>
+                  <input name="vehiclePlate" type="text" autocomplete="off" placeholder="۱۲ الف ۳۴۵" required disabled />
+                </span>
+                <small class="register-error"></small>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="register-section">
+            <legend>امنیت حساب</legend>
+            <p>برای ورودهای بعدی یک رمز امن بساز.</p>
+
+            <div class="register-grid register-grid--two">
+              <label class="register-field">
+              <span>رمز عبور</span>
+              <span class="register-control">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="5.2" y="10.4" width="13.6" height="10" rx="2.2" stroke="currentColor" stroke-width="1.7" />
+                  <path d="M8.2 10.4V7.9a3.8 3.8 0 0 1 7.6 0v2.5M12 14.2v2.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                </svg>
+                <input name="password" type="password" autocomplete="new-password" placeholder="حداقل ۶ کاراکتر" required />
+              </span>
+              <small class="register-error"></small>
+              </label>
+
+              <label class="register-field">
+              <span>تکرار رمز عبور</span>
+              <span class="register-control">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="5.2" y="10.4" width="13.6" height="10" rx="2.2" stroke="currentColor" stroke-width="1.7" />
+                  <path d="M8.2 10.4V7.9a3.8 3.8 0 0 1 7.6 0v2.5M12 14.2v2.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                </svg>
+                <input name="passwordConfirm" type="password" autocomplete="new-password" placeholder="رمز را دوباره وارد کن" required />
+              </span>
+              <small class="register-error"></small>
+              </label>
+            </div>
+          </fieldset>
+
+          <label class="register-consent">
+            <input name="terms" type="checkbox" required />
+            <span class="register-consent__box" aria-hidden="true"></span>
+            <span>با قوانین استفاده و احراز هویت رانندگان موافقم.</span>
+          </label>
+
+          <button class="register-submit" type="submit">
+            <span>ادامه و تأیید شماره</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 12h13M13 7l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+
+          <p class="register-form-note"><span aria-hidden="true">⌁</span> در مرحله بعد کد تأیید به شماره موبایل شما ارسال می‌شود.</p>
+        </form>
+      </section>
+
+      <footer class="register-footer">
+        <span>نیاز به کمک داری؟</span>
+        <a href="tel:1512">پشتیبانی رانندگان ۱۵۱۲ <b>←</b></a>
+      </footer>
+    </main>
+
+    <div class="register-toast" id="register-toast" role="status" aria-live="polite">
+      <span class="register-toast__icon" aria-hidden="true"></span>
+      <span>این صفحه فعلاً پیش‌نمایش طراحی است.</span>
+    </div>
+
+    <script src="driver-register.js"></script>
+  </body>
+</html>

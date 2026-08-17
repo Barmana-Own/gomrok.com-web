@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ورود راننده کامیون به پنل حمل‌ونقل گمرکی راهکاران گمرک" />
+    <title>سامانه گمرک | gomrok.org</title>
+    <link rel="stylesheet" href="driver-login.css" />
+  </head>
+  <body>
+    <main class="driver-auth" id="driver-auth">
+      <section class="driver-hero" aria-label="پنل راننده کامیون">
+        <div class="driver-hero__glow driver-hero__glow--top" aria-hidden="true"></div>
+        <div class="driver-hero__glow driver-hero__glow--bottom" aria-hidden="true"></div>
+        <div class="driver-hero__grid" aria-hidden="true"></div>
+
+        <header class="driver-brand">
+          <a class="driver-brand__link" href="design-options.html" aria-label="مشاهده طرح‌های ورود">
+            <span class="driver-brand__mark" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none">
+                <path d="M24 5 40 11v11c0 10.2-6.6 17.9-16 21C14.6 39.9 8 32.2 8 22V11L24 5Z" fill="currentColor" opacity=".17" />
+                <path d="M24 9.5 36 14v8.1c0 7.7-4.6 13.4-12 16.2-7.4-2.8-12-8.5-12-16.2V14l12-4.5Z" stroke="currentColor" stroke-width="2.2" />
+                <path d="m16.7 25 4.3 4.3 10.5-11" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="driver-brand__copy">
+              <strong>راهکاران گمرک</strong>
+              <small>سامانه حمل‌ونقل یکپارچه</small>
+            </span>
+          </a>
+          <span class="driver-brand__status"><i></i> ارتباط امن</span>
+        </header>
+
+        <div class="driver-hero__content">
+          <p class="driver-hero__eyebrow"><span></span> پنل اختصاصی رانندگان</p>
+          <h1>مسیرت<br /><em>از اینجا شروع می‌شود.</em></h1>
+          <p class="driver-hero__lead">سفرها، مأموریت‌ها و وضعیت بار را از یک مسیر ساده و امن دنبال کن.</p>
+
+          <div class="driver-route-card" aria-label="نمونه مسیر حمل بار">
+            <div class="driver-route-card__head">
+              <span><i></i> مسیر فعال</span>
+              <small>امروز، ۰۸:۴۵</small>
+            </div>
+            <div class="driver-route-map" aria-hidden="true">
+              <span class="driver-route-map__road driver-route-map__road--one"></span>
+              <span class="driver-route-map__road driver-route-map__road--two"></span>
+              <span class="driver-route-map__road driver-route-map__road--three"></span>
+              <span class="driver-route-map__pin driver-route-map__pin--start"><b>۱</b></span>
+              <span class="driver-route-map__pin driver-route-map__pin--end"><b>۲</b></span>
+              <span class="driver-route-map__truck" aria-hidden="true">
+                <svg viewBox="0 0 32 24" fill="none">
+                  <path d="M2.5 5.5h17v12h-17zM19.5 10h5l5 4v3.5h-10z" fill="currentColor" opacity=".14" />
+                  <path d="M2.5 5.5h17v12h-17zM19.5 10h5l5 4v3.5h-10zM7 20.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM25 20.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                  <path d="M22 10v4h7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                </svg>
+              </span>
+            </div>
+            <div class="driver-route-card__locations">
+              <span><small>مبدأ</small><strong>بندرعباس</strong></span>
+              <span><small>مقصد</small><strong>تهران</strong></span>
+              <b>۶۸٪</b>
+            </div>
+          </div>
+        </div>
+
+        <footer class="driver-hero__footer">
+          <span class="driver-support"><i aria-hidden="true">?</i><span>پشتیبانی رانندگان</span><strong>۱۵۱۲</strong></span>
+          <span>نسخه ۱.۰.۰</span>
+        </footer>
+      </section>
+
+      <section class="driver-panel" aria-label="فرم ورود راننده کامیون">
+        <div class="driver-panel__inner">
+          <a class="driver-mobile-brand" href="design-options.html" aria-label="مشاهده طرح‌های ورود">
+            <span class="driver-mobile-brand__mark" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none">
+                <path d="M24 5 40 11v11c0 10.2-6.6 17.9-16 21C14.6 39.9 8 32.2 8 22V11L24 5Z" fill="currentColor" opacity=".17" />
+                <path d="M24 9.5 36 14v8.1c0 7.7-4.6 13.4-12 16.2-7.4-2.8-12-8.5-12-16.2V14l12-4.5Z" stroke="currentColor" stroke-width="2.2" />
+                <path d="m16.7 25 4.3 4.3 10.5-11" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <strong>راهکاران گمرک</strong>
+          </a>
+
+          <div class="driver-panel__heading">
+            <p class="driver-panel__eyebrow"><span></span> ورود امن راننده</p>
+            <h2>خوش آمدی، راننده</h2>
+            <p>برای ورود به پنل سفرها، شماره موبایل خود را وارد کن.</p>
+          </div>
+
+          <div class="driver-role-chip">
+            <span class="driver-role-chip__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M3.5 6h11v9h-11zM14.5 9h3.2l3 3v3h-6.2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                <path d="M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="currentColor" stroke-width="1.5" />
+              </svg>
+            </span>
+            <span>ورود راننده کامیون</span>
+            <i aria-hidden="true"></i>
+          </div>
+
+          <div class="driver-methods" role="tablist" aria-label="روش ورود">
+            <button class="driver-methods__button is-active" type="button" role="tab" aria-selected="true" data-login-method="password">رمز عبور</button>
+            <button class="driver-methods__button" type="button" role="tab" aria-selected="false" data-login-method="otp">کد پیامکی</button>
+          </div>
+
+          <form class="driver-form" id="driver-login-form" novalidate>
+            <div class="driver-field">
+              <label for="driver-phone">شماره موبایل</label>
+              <div class="driver-field__control">
+                <span class="driver-field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="7" y="3.6" width="10" height="16.8" rx="2.1" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M10 6h4M11 17.2h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <input id="driver-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="۰۹۱۲۱۲۳۴۵۶۷" required />
+              </div>
+              <p class="driver-field__error" data-error-for="driver-phone" aria-live="polite"></p>
+            </div>
+
+            <div class="driver-field" id="driver-password-field">
+              <label for="driver-password">رمز عبور</label>
+              <div class="driver-field__control">
+                <span class="driver-field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="5.2" y="10.4" width="13.6" height="10" rx="2.2" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M8.2 10.4V7.9a3.8 3.8 0 0 1 7.6 0v2.5M12 14.2v2.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <input id="driver-password" name="password" type="password" autocomplete="current-password" placeholder="رمز عبور خود را وارد کن" required />
+                <button class="driver-password-toggle" type="button" data-password-toggle aria-label="نمایش رمز عبور">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M3.5 12s3.1-5 8.5-5 8.5 5 8.5 5-3.1 5-8.5 5-8.5-5-8.5-5Z" stroke="currentColor" stroke-width="1.7" />
+                    <circle cx="12" cy="12" r="2.2" stroke="currentColor" stroke-width="1.7" />
+                  </svg>
+                </button>
+              </div>
+              <p class="driver-field__error" data-error-for="driver-password" aria-live="polite"></p>
+            </div>
+
+            <div class="driver-field driver-field--otp is-hidden" id="driver-otp-field">
+              <label for="driver-otp">کد تأیید پیامکی</label>
+              <div class="driver-field__control">
+                <span class="driver-field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="4.5" y="6" width="15" height="12" rx="2.3" stroke="currentColor" stroke-width="1.7" />
+                    <path d="m7.2 9.2 4.8 3.6 4.8-3.6M7.5 15.5h.1M10.5 15.5h.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <input id="driver-otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="کد ۴ رقمی را وارد کن" />
+              </div>
+              <p class="driver-field__error" data-error-for="driver-otp" aria-live="polite"></p>
+              <span class="driver-otp-help">کد برای شماره موبایل شما ارسال می‌شود.</span>
+            </div>
+
+            <div class="driver-form__meta">
+              <label class="driver-check">
+                <input id="driver-remember" name="remember" type="checkbox" />
+                <span class="driver-check__box" aria-hidden="true"></span>
+                <span>مرا به خاطر بسپار</span>
+              </label>
+              <button class="driver-text-button" type="button" data-forgot-password>فراموشی رمز عبور؟</button>
+            </div>
+
+            <button class="driver-primary-button" type="submit">
+              <span class="driver-primary-button__label">ورود به پنل راننده</span>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 12h13M13 7l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </form>
+
+          <form class="driver-form driver-register-form is-hidden" id="driver-register-form" novalidate>
+            <div class="driver-form__section">
+              <strong>اطلاعات هویتی</strong>
+              <span>مشخصات شما باید مطابق مدارک شناسایی باشد.</span>
+            </div>
+
+            <div class="driver-form__grid driver-form__grid--two">
+              <div class="driver-field">
+                <label for="driver-first-name">نام</label>
+                <div class="driver-field__control">
+                  <span class="driver-field__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7" />
+                      <path d="M5.5 19.5c.7-3 2.9-4.6 6.5-4.6s5.8 1.6 6.5 4.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                    </svg>
+                  </span>
+                  <input id="driver-first-name" name="firstName" type="text" autocomplete="given-name" placeholder="مثلاً امیر" required />
+                </div>
+                <p class="driver-field__error" data-error-for="driver-first-name" aria-live="polite"></p>
+              </div>
+
+              <div class="driver-field">
+                <label for="driver-last-name">نام خانوادگی</label>
+                <div class="driver-field__control">
+                  <span class="driver-field__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7" />
+                      <path d="M5.5 19.5c.7-3 2.9-4.6 6.5-4.6s5.8 1.6 6.5 4.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                    </svg>
+                  </span>
+                  <input id="driver-last-name" name="lastName" type="text" autocomplete="family-name" placeholder="مثلاً رضایی" required />
+                </div>
+                <p class="driver-field__error" data-error-for="driver-last-name" aria-live="polite"></p>
+              </div>
+            </div>
+
+            <div class="driver-field">
+              <label for="driver-national-id">کد ملی</label>
+              <div class="driver-field__control">
+                <span class="driver-field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="4.2" y="5.5" width="15.6" height="13" rx="2" stroke="currentColor" stroke-width="1.7" />
+                    <circle cx="8.3" cy="11.2" r="1.6" stroke="currentColor" stroke-width="1.5" />
+                    <path d="M6.4 15.5c.4-1.1 1-1.7 1.9-1.7s1.5.6 1.9 1.7M12.5 10h4.6M12.5 13h4.6M12.5 16h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <input id="driver-national-id" name="nationalId" type="text" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="کد ملی ۱۰ رقمی" required />
+              </div>
+              <p class="driver-field__error" data-error-for="driver-national-id" aria-live="polite"></p>
+            </div>
+
+            <div class="driver-field">
+              <label for="driver-register-phone">شماره موبایل</label>
+              <div class="driver-field__control">
+                <span class="driver-field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="7" y="3.6" width="10" height="16.8" rx="2.1" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M10 6h4M11 17.2h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <input id="driver-register-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="۰۹۱۲۱۲۳۴۵۶۷" required />
+              </div>
+              <p class="driver-field__error" data-error-for="driver-register-phone" aria-live="polite"></p>
+            </div>
+
+            <div class="driver-form__section driver-form__section--spaced">
+              <strong>اطلاعات کاری</strong>
+              <span>برای تطبیق راننده و وسیله‌ی نقلیه استفاده می‌شود.</span>
+            </div>
+
+            <div class="driver-field">
+              <label for="driver-license">شماره گواهینامه</label>
+              <div class="driver-field__control">
+                <span class="driver-field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M7 4.5h8.5L18.5 7v12.5H7z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+                    <path d="M15.5 4.8V7h2.2M9.5 11h6M9.5 14h6M9.5 17h3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <input id="driver-license" name="licenseNumber" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="شماره گواهینامه" required />
+              </div>
+              <p class="driver-field__error" data-error-for="driver-license" aria-live="polite"></p>
+            </div>
+
+            <div class="driver-field">
+              <label for="driver-vehicle-type">نوع وسیله نقلیه</label>
+              <div class="driver-field__control">
+                <span class="driver-field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M3.5 6h11v9h-11zM14.5 9h3.2l3 3v3h-6.2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                    <path d="M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="currentColor" stroke-width="1.5" />
+                  </svg>
+                </span>
+                <select id="driver-vehicle-type" name="vehicleType" required>
+                  <option value="">انتخاب نوع وسیله</option>
+                  <option value="truck">کامیون</option>
+                  <option value="trailer">تریلی</option>
+                  <option value="pickup">کامیونت</option>
+                </select>
+              </div>
+              <p class="driver-field__error" data-error-for="driver-vehicle-type" aria-live="polite"></p>
+            </div>
+
+            <div class="driver-field">
+              <label for="driver-plate">پلاک وسیله نقلیه</label>
+              <div class="driver-field__control">
+                <span class="driver-field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M3.5 6h11v9h-11zM14.5 9h3.2l3 3v3h-6.2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                    <path d="M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="currentColor" stroke-width="1.5" />
+                  </svg>
+                </span>
+                <input id="driver-plate" name="vehiclePlate" type="text" autocomplete="off" placeholder="مثلاً ۱۲ الف ۳۴۵ ایران ۶۷" required />
+              </div>
+              <p class="driver-field__error" data-error-for="driver-plate" aria-live="polite"></p>
+            </div>
+
+            <div class="driver-field">
+              <label for="driver-register-password">رمز عبور</label>
+              <div class="driver-field__control">
+                <span class="driver-field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="5.2" y="10.4" width="13.6" height="10" rx="2.2" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M8.2 10.4V7.9a3.8 3.8 0 0 1 7.6 0v2.5M12 14.2v2.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <input id="driver-register-password" name="password" type="password" autocomplete="new-password" placeholder="حداقل ۶ کاراکتر" required />
+              </div>
+              <p class="driver-field__error" data-error-for="driver-register-password" aria-live="polite"></p>
+            </div>
+
+            <div class="driver-field">
+              <label for="driver-register-password-confirm">تکرار رمز عبور</label>
+              <div class="driver-field__control">
+                <span class="driver-field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <rect x="5.2" y="10.4" width="13.6" height="10" rx="2.2" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M8.2 10.4V7.9a3.8 3.8 0 0 1 7.6 0v2.5M12 14.2v2.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <input id="driver-register-password-confirm" name="passwordConfirm" type="password" autocomplete="new-password" placeholder="رمز را دوباره وارد کن" required />
+              </div>
+              <p class="driver-field__error" data-error-for="driver-register-password-confirm" aria-live="polite"></p>
+            </div>
+
+            <label class="driver-check driver-check--full">
+              <input id="driver-register-terms" name="terms" type="checkbox" required />
+              <span class="driver-check__box" aria-hidden="true"></span>
+              <span>با قوانین استفاده و احراز هویت رانندگان موافقم.</span>
+            </label>
+            <p class="driver-field__error driver-register-terms-error" data-error-for="driver-register-terms" aria-live="polite"></p>
+
+            <button class="driver-primary-button" type="submit">
+              <span>ایجاد حساب راننده</span>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 12h13M13 7l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </form>
+
+          <div class="driver-signup">
+            <span data-auth-switch-text>هنوز حساب راننده نداری؟</span>
+            <button type="button" data-auth-toggle>ثبت‌نام راننده</button>
+          </div>
+
+          <div class="driver-panel__note">
+            <span aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7" />
+                <path d="M12 10.7v5M12 7.7v.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg>
+            </span>
+            ورود شما با رمزنگاری امن انجام می‌شود.
+          </div>
+        </div>
+
+        <footer class="driver-panel__footer">
+          <span>نیاز به کمک داری؟</span>
+          <a href="tel:1512">تماس با پشتیبانی ۱۵۱۲ <b>←</b></a>
+        </footer>
+      </section>
+    </main>
+
+    <div class="driver-toast" id="driver-toast" role="status" aria-live="polite">
+      <span class="driver-toast__icon" aria-hidden="true"></span>
+      <span class="driver-toast__message"></span>
+    </div>
+
+    <script src="driver-login.js"></script>
+  </body>
+</html>

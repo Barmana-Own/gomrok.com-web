@@ -1,0 +1,14 @@
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.env
+**/.env
+!.env.example
+*.log
+*.zip
+*.bak
+*.tmp
+coverage/
+.DS_Store
+Thumbs.db
