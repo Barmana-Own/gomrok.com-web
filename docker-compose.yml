@@ -4,7 +4,7 @@ services:
     container_name: ${MYSQL_CONTAINER_NAME:-gomrok-mysql}
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-gomrok_dev_only_change_me}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env before starting MySQL}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-gomrok}
       TZ: Asia/Tehran
     ports:

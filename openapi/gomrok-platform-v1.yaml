@@ -1,0 +1,1493 @@
+openapi: 3.0.3
+info:
+  title: GomrokDotCom Shared Platform API
+  version: 1.0.0-pre
+  description: Server-enforced contract for the six Gomrok product surfaces.
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+paths:
+  /auth/refresh:
+    post:
+      summary: Rotate a refresh token and issue a short-lived access token
+      operationId: refreshSession
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: Rotated session tokens
+  /auth/change-password:
+    post:
+      summary: Change the current Driver or Company Y password and revoke refresh sessions
+      operationId: changePassword
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, format: password }
+                newPassword: { type: string, format: password, minLength: 12 }
+      responses:
+        '200':
+          description: Password changed and refresh sessions revoked
+  /platform/context:
+    get:
+      summary: Return the authenticated membership scope
+      operationId: getPlatformContext
+      responses:
+        '200':
+          description: Tenant, organization, role and permission scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformContext'
+  /platform/dashboard:
+    get:
+      summary: Read the tenant-scoped control-tower read model
+      operationId: getPlatformDashboard
+      responses:
+        '200':
+          description: Role-scoped cases, trips and notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+  /platform/realtime:
+    get:
+      summary: Open a tenant- and organization-scoped server-sent event stream
+      operationId: streamPlatformEvents
+      description: The stream emits safe event metadata only. Clients must reconnect with the bearer token and use the dashboard read model as source of truth; Last-Event-ID replay is not provided by the in-process MVP broker.
+      responses:
+        '200':
+          description: Server-sent events stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '429':
+          description: Realtime connection capacity exhausted
+  /platform/cases:
+    post:
+      summary: Create a structured cargo request
+      operationId: createCargoRequest
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CargoRequest'
+      responses:
+        '201':
+          description: Draft case created
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /platform/cases/{caseId}/publish-rfq:
+    post:
+      summary: Publish sealed RFQ1
+      operationId: publishRfq1
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: RFQ1 opened
+  /platform/cases/{caseId}/draft:
+    patch:
+      summary: Save an incomplete shipper wizard draft
+      operationId: saveShipperDraft
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Draft and server review result
+        '409':
+          description: Only DRAFT cases are mutable
+  /platform/cases/{caseId}/review:
+    get:
+      summary: Return server missing fields, conflicts, compliance blocks and RulePack version
+      operationId: reviewShipperDraft
+      parameters: [{ $ref: '#/components/parameters/CaseId' }]
+      responses: { '200': { description: Server-owned wizard review } }
+  /platform/cases/{caseId}/capacity-rfq:
+    post:
+      summary: Publish isolated RFQ2 from Company X
+      operationId: publishRfq2
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: RFQ2 opened
+  /platform/cases/{caseId}/accept-award:
+    post:
+      summary: Record Company X acceptance of a human customer award
+      operationId: acceptCompanyXAward
+      parameters: [{ $ref: '#/components/parameters/CaseId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Award acceptance recorded; contract remains the role-lock transition } }
+  /platform/rfqs/{rfqId}:
+    get:
+      summary: Read only quotes allowed by sealed-book policy
+      operationId: getRfq
+      parameters:
+        - $ref: '#/components/parameters/RfqId'
+      responses:
+        '200':
+          description: RFQ read model
+  /platform/rfqs:
+    get:
+      summary: List Company Y invitation-scoped RFQ2 books without competitor bids
+      operationId: listCarrierRfq2
+      parameters:
+        - name: level
+          in: query
+          required: false
+          schema: { type: string, enum: [RFQ2], default: RFQ2 }
+      responses: { '200': { description: Invitation-scoped RFQ2 read model } }
+  /platform/rfqs/{rfqId}/quotes:
+    post:
+      summary: Submit a sealed quote
+      operationId: submitQuote
+      parameters:
+        - $ref: '#/components/parameters/RfqId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteInput'
+      responses:
+        '201':
+          description: Quote accepted into the isolated quote book
+  /platform/rfqs/{rfqId}/pricing:
+    get:
+      summary: Read Company X internal pricing for its own Market A quote
+      operationId: getCompanyXQuotePricing
+      parameters: [{ $ref: '#/components/parameters/RfqId' }]
+      responses: { '200': { description: X-only pricing and margin read model } }
+  /platform/rfqs/{rfqId}/award:
+    post:
+      summary: Human award with reason; direct Company X to Driver award is rejected
+      operationId: awardRfq
+      parameters:
+        - $ref: '#/components/parameters/RfqId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AwardInput'
+      responses:
+        '200':
+          description: Human award recorded
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /platform/trips/{tripId}/start:
+    post:
+      summary: Start a trip only after readiness gates are true
+      operationId: startTrip
+      parameters:
+        - $ref: '#/components/parameters/TripId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Trip tracking activated
+  /platform/trips/{tripId}/pod:
+    get:
+      summary: Read submitted or accepted POD evidence in least privilege scope
+      operationId: getPod
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: POD read model } }
+    post:
+      summary: Submit delivery evidence for review
+      operationId: submitPod
+      parameters:
+        - $ref: '#/components/parameters/TripId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PodEvidence'
+      responses:
+        '201':
+          description: POD submitted, not accepted
+        '424':
+          description: Evidence incomplete
+  /platform/pods/{podId}/accept:
+    post:
+      summary: Human review and accept POD
+      operationId: acceptPod
+      parameters:
+        - $ref: '#/components/parameters/PodId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: POD accepted and settlement condition updated
+  /platform/pods/{podId}/return:
+    post:
+      summary: Return insufficient POD evidence for completion
+      operationId: returnPod
+      parameters: [{ $ref: '#/components/parameters/PodId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, minLength: 8 } }
+      responses: { '200': { description: POD returned without deleting evidence } }
+  /platform/pods/{podId}/risk-flag:
+    post:
+      summary: Append a human risk or fraud flag to POD review
+      operationId: flagPodRisk
+      parameters: [{ $ref: '#/components/parameters/PodId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { flagType: { type: string }, reason: { type: string, minLength: 8 } }
+      responses: { '200': { description: Risk flag appended and audited } }
+  /platform/contact-reveals:
+    post:
+      summary: Request temporary, reasoned contact reveal
+      operationId: requestContactReveal
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Reveal grant created and audited
+  /platform/exports:
+    post:
+      summary: Request a governed, scoped CRM export
+      operationId: requestExport
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Second-person approval required
+  /platform/cases/{caseId}:
+    get:
+      summary: Read a tenant-scoped case, timeline and documents
+      parameters: [{ $ref: '#/components/parameters/CaseId' }]
+      responses: { '200': { description: Case read model } }
+  /platform/cases/{caseId}/contract:
+    get:
+      summary: Read versioned Customer-X contract without Market B ledgers
+      operationId: getCustomerXContract
+      parameters: [{ $ref: '#/components/parameters/CaseId' }]
+      responses: { '200': { description: Versioned contract read model } }
+  /platform/cases/{caseId}/customer-contract:
+    post:
+      summary: Lock the human customer-to-Company-X contract transition
+      parameters: [{ $ref: '#/components/parameters/CaseId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Contract signed } }
+  /platform/contracts/{contractId}/amend:
+    post:
+      summary: Create an amendment version without overwriting a signed contract
+      operationId: amendCustomerXContract
+      parameters: [{ $ref: '#/components/parameters/ContractId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Amendment awaiting signature } }
+  /platform/contracts/{contractId}/sign:
+    post:
+      summary: Sign and lock a pending customer contract version
+      operationId: signCustomerXContract
+      parameters: [{ $ref: '#/components/parameters/ContractId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Contract version signed and locked } }
+  /platform/contracts/{contractId}/accept-x:
+    post:
+      summary: Accept a customer-signed Customer-X contract as Company X
+      operationId: acceptCompanyXContract
+      parameters: [{ $ref: '#/components/parameters/ContractId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Company X acceptance recorded without overwriting the contract version } }
+  /platform/trips:
+    post:
+      summary: Create an operational trip after Company Y award
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Trip created } }
+  /platform/trips/{tripId}/accept-award:
+    post:
+      summary: Record Company Y acceptance of its awarded RFQ2 capacity
+      operationId: acceptCompanyYAward
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Carrier award accepted; nomination remains a separate transition } }
+  /platform/driver-assignments:
+    post:
+      summary: Introduce a driver inside Company Y coverage
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Driver assignment created } }
+  /platform/trips/{tripId}/nominate:
+    post:
+      summary: Nominate a validated driver and vehicle from Company Y
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Truck nominated } }
+  /platform/trips/{tripId}/nomination:
+    get:
+      summary: Read the least-data driver and vehicle nomination for Company X
+      operationId: getTripNomination
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: Validated carrier coverage and nomination read model for X or the awarded Y } }
+  /platform/carrier/network:
+    get:
+      summary: Read Company Y owned drivers, coverage records and vehicles
+      operationId: getCarrierNetwork
+      responses: { '200': { description: Y-scoped DriverCarrierCoverage and vehicle read model } }
+  /platform/vehicles:
+    post:
+      summary: Create a Company Y owned vehicle or trailer record
+      operationId: createCarrierVehicle
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VehicleInput' }
+      responses: { '201': { description: Vehicle registry record created } }
+  /platform/vehicles/{vehicleId}:
+    patch:
+      summary: Update a Company Y owned vehicle record
+      operationId: updateCarrierVehicle
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VehicleInput' }
+      responses: { '200': { description: Vehicle registry record updated } }
+  /platform/trips/{tripId}/agent:
+    post:
+      summary: Assign an authorized Agent/Z or consignee
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentAssignmentInput' }
+      responses: { '201': { description: Authorized recipient assignment created } }
+  /platform/trips/{tripId}/readiness:
+    post:
+      summary: Update server-verified customs, permit, document and check-in gates
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Readiness updated } }
+  /platform/trips/{tripId}/loading-schedule:
+    get:
+      summary: Read versioned loading schedules
+      operationId: getLoadingSchedules
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: Immutable loading schedule history } }
+    post:
+      summary: Create a new loading schedule version
+      operationId: createLoadingSchedule
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoadingScheduleInput' }
+      responses: { '201': { description: Loading schedule version created } }
+  /platform/trips/{tripId}/loading-evidence:
+    get:
+      summary: Read immutable loading evidence for the selected trip
+      operationId: getLoadingEvidence
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: Loading evidence read model } }
+    post:
+      summary: Append an arrival, checklist, scale, seal or loading evidence record
+      operationId: submitLoadingEvidence
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoadingEvidenceInput' }
+      responses: { '201': { description: Immutable loading evidence accepted } }
+  /platform/trips/{tripId}/status:
+    post:
+      summary: Advance the operational trip state through the server state graph
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: State advanced } }
+  /platform/trips/{tripId}/tir:
+    get:
+      summary: Read the independent TIR state and Holder metadata for an authorized trip party
+      operationId: getTripTir
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: TIR Holder and discharge read model } }
+    post:
+      summary: Advance the independent TIR workflow with Holder authorization
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: TIR state advanced } }
+  /platform/trips/{tripId}/location-events:
+    post:
+      summary: Append active-trip location or border evidence
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: Location event accepted } }
+  /platform/trips/{tripId}/tracking:
+    get:
+      summary: Read least-privilege active-trip tracking
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: Tracking read model } }
+  /platform/documents:
+    post:
+      summary: Create an immutable document version
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Version created } }
+  /platform/documents/{documentId}:
+    get:
+      summary: Read a document version
+      parameters: [{ $ref: '#/components/parameters/DocumentId' }]
+      responses: { '200': { description: Document read model } }
+  /platform/documents/{documentId}/approve:
+    post:
+      summary: Approve and lock a document version
+      parameters: [{ $ref: '#/components/parameters/DocumentId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Version locked } }
+  /platform/documents/{documentId}/reject:
+    post:
+      summary: Return a current CMR Draft for correction with a reason
+      operationId: rejectCmrDraft
+      parameters: [{ $ref: '#/components/parameters/DocumentId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Draft returned; immutable history retained } }
+  /platform/documents/{documentId}/download:
+    get:
+      summary: Issue a short-lived audited download token
+      parameters: [{ $ref: '#/components/parameters/DocumentId' }]
+      responses: { '200': { description: Audited download reference } }
+  /platform/cases/{caseId}/cmr-draft:
+    post:
+      summary: Create a versioned CMR Draft for shipper review
+      parameters: [{ $ref: '#/components/parameters/CaseId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: CMR Draft created } }
+  /platform/trips/{tripId}/final-cmr:
+    post:
+      summary: Issue final CMR only after approved draft
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Final CMR issued } }
+  /platform/cases/{caseId}/contacts:
+    get:
+      summary: Return masked contacts or an active audited reveal
+      parameters: [{ $ref: '#/components/parameters/CaseId' }]
+      responses: { '200': { description: Masked contact read model } }
+  /platform/cases/{caseId}/settlements:
+    get:
+      summary: Return only relationship-visible ledger rows
+      parameters: [{ $ref: '#/components/parameters/CaseId' }]
+      responses: { '200': { description: Relationship-scoped settlement read model } }
+  /platform/cases/{caseId}/finance:
+    get:
+      summary: Read only the Customer-X relationship ledger
+      operationId: getCustomerXFinance
+      parameters: [{ $ref: '#/components/parameters/CaseId' }]
+      responses: { '200': { description: Relationship-scoped finance read model } }
+  /platform/settlements:
+    post:
+      summary: Request settlement in an explicit financial relationship
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Settlement requested } }
+  /platform/settlements/{settlementId}/confirm:
+    post:
+      summary: Confirm a Customer-X settlement after POD and import conditions
+      operationId: confirmCustomerXSettlement
+      parameters: [{ $ref: '#/components/parameters/SettlementId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': { description: Settlement confirmed }
+        '424': { description: Settlement evidence is incomplete }
+        '428': { description: Step-up authentication required }
+  /platform/cases/{caseId}/claims:
+    post:
+      summary: Open a parallel claim case
+      operationId: openClaim
+      parameters: [{ $ref: '#/components/parameters/CaseId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Claim opened } }
+  /platform/cases/{caseId}/disputes:
+    post:
+      summary: Open a parallel financial or operational dispute case
+      operationId: openDispute
+      parameters: [{ $ref: '#/components/parameters/CaseId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Dispute opened } }
+  /platform/cases/{caseId}/issues:
+    get:
+      summary: Read claims and disputes for a case
+      operationId: listCaseIssues
+      parameters: [{ $ref: '#/components/parameters/CaseId' }]
+      responses: { '200': { description: Case issue read model } }
+  /platform/claims/{claimId}:
+    patch:
+      summary: Update a relationship-scoped claim or dispute status
+      operationId: updateClaim
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { status: { type: string, enum: [OPEN, ACKNOWLEDGED, RESOLVED, CLOSED] }, reason: { type: string, minLength: 8 } }
+      responses: { '200': { description: Claim or dispute updated and audited } }
+  /platform/claims/{claimId}/evidence:
+    post:
+      summary: Append immutable relationship-scoped claim evidence
+      operationId: addClaimEvidence
+      parameters:
+        - name: claimId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { evidence: { type: object } } }
+      responses: { '201': { description: Evidence appended without destructive replacement } }
+  /platform/cases/{caseId}/exceptions:
+    get:
+      summary: Read Company X operational exceptions for a case
+      operationId: listCaseExceptions
+      parameters: [{ $ref: '#/components/parameters/CaseId' }]
+      responses: { '200': { description: Exception queue read model } }
+  /platform/trips/{tripId}/exceptions:
+    post:
+      summary: Open a human-reviewed operational exception
+      operationId: openTripException
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExceptionInput' }
+      responses: { '201': { description: Exception opened and audited } }
+  /platform/exceptions/{exceptionId}:
+    patch:
+      summary: Acknowledge, resolve or close an exception
+      operationId: updateException
+      parameters:
+        - name: exceptionId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { status: { type: string, enum: [OPEN, ACKNOWLEDGED, RESOLVED, CLOSED] }, reason: { type: string, minLength: 8 } }
+      responses: { '200': { description: Exception status updated without deleting evidence } }
+  /platform/notifications:
+    get:
+      summary: Read recipient-scoped domain-event notifications
+      operationId: listNotifications
+      responses: { '200': { description: Notification read model } }
+  /platform/organization/members:
+    get:
+      summary: Read active members of the authenticated Company Y organization
+      operationId: listCarrierOrganizationMembers
+      responses: { '200': { description: Organization-scoped member list } }
+  /platform/exports/{exportId}/approve:
+    post:
+      summary: Approve a governed export as a second person
+      parameters: [{ $ref: '#/components/parameters/ExportId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Export approved } }
+  /platform/exports/{exportId}/execute:
+    post:
+      summary: Execute an approved scoped export
+      parameters: [{ $ref: '#/components/parameters/ExportId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Export executed and audited } }
+  /platform/audit:
+    get:
+      summary: Read append-only, tenant-scoped audit events
+      responses: { '200': { description: Audit read model } }
+  /platform/agent/profile:
+    get:
+      summary: Read the authenticated Agent/Z organization KYC and security scope
+      operationId: getAgentProfile
+      responses: { '200': { description: Agent organization and KYC read model } }
+  /platform/agent/dashboard:
+    get:
+      summary: Read Assignment-scoped destination deliveries and X-Agent settlement summary
+      operationId: getAgentDashboard
+      responses: { '200': { description: Agent/Z destination dashboard without Market A/B prices } }
+  /platform/agent/deliveries:
+    get:
+      summary: List only valid or pending assignments for the authenticated Agent/Z organization
+      operationId: listAgentDeliveries
+      responses: { '200': { description: Assigned delivery queue } }
+  /platform/agent/devices/bind:
+    post:
+      summary: Bind an Agent/Z web or mobile device before sensitive delivery actions
+      operationId: bindAgentDevice
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceId]
+              properties:
+                deviceId: { type: string, minLength: 12 }
+                platform: { type: string }
+                appVersion: { type: string }
+      responses: { '201': { description: Device binding recorded and audited } }
+  /platform/agent/trips/{tripId}:
+    get:
+      summary: Read an assigned destination trip, authority, POD and evidence chain
+      operationId: getAgentTrip
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: Assignment-scoped Agent trip read model } }
+  /platform/agent/trips/{tripId}/verify:
+    post:
+      summary: Verify recipient, CMR, location and delivery checklist without accepting POD
+      operationId: verifyAgentDelivery
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentDeliveryVerification'
+      responses:
+        '201': { description: Delivery verification appended to the evidence chain }
+        '422': { description: Recipient, authority or location mismatch requires controlled handling }
+  /platform/agent/trips/{tripId}/evidence:
+    post:
+      summary: Append destination photo, signature, stamp or receipt evidence as a versioned document
+      operationId: submitAgentDeliveryEvidence
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentEvidenceInput'
+      responses: { '201': { description: Immutable destination evidence version created } }
+  /platform/agent/trips/{tripId}/documents:
+    post:
+      summary: Upload a versioned signed CMR, warehouse, unloading, release or authority document
+      operationId: uploadAgentDestinationDocument
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentDocumentInput'
+      responses: { '201': { description: Destination document version created without overwrite } }
+  /platform/agent/trips/{tripId}/delivery/otp/request:
+    post:
+      summary: Issue an audited delivery OTP challenge for an assigned destination
+      operationId: requestAgentDeliveryOtp
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: OTP challenge created } }
+  /platform/agent/trips/{tripId}/delivery/otp/verify:
+    post:
+      summary: Verify an Agent delivery OTP challenge
+      operationId: verifyAgentDeliveryOtp
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challengeId, code]
+              properties:
+                challengeId: { type: string }
+                code: { type: string, pattern: '^\\d{6}$' }
+      responses: { '200': { description: OTP verified or rejected } }
+  /platform/agent/trips/{tripId}/discrepancies:
+    post:
+      summary: Open a controlled destination discrepancy and notify Company X/Y
+      operationId: openAgentDiscrepancy
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExceptionInput' }
+      responses: { '201': { description: Discrepancy and risk event recorded } }
+  /platform/agent/settlements:
+    get:
+      summary: Read only the relationship-scoped X-Agent settlement ledger
+      operationId: getAgentSettlements
+      responses: { '200': { description: X-Agent settlement read model } }
+  /platform/agent/settlements/{settlementId}/dispute:
+    post:
+      summary: Open an Agent dispute against an own X-Agent settlement
+      operationId: disputeAgentSettlement
+      parameters: [{ $ref: '#/components/parameters/SettlementId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: X-Agent settlement dispute opened and audited } }
+  /platform/driver/dashboard:
+    get:
+      summary: Driver-only mobile dashboard
+      operationId: getDriverDashboard
+      responses: { '200': { description: Assigned trips, opportunities and own relationship metrics } }
+  /platform/driver/profile:
+    get:
+      summary: Read the authenticated driver's own profile, coverage, vehicles and documents
+      operationId: getDriverProfile
+      responses: { '200': { description: Own driver read model } }
+    patch:
+      summary: Change the driver's availability state
+      operationId: updateDriverAvailability
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: Availability changed } }
+  /platform/driver/devices/bind:
+    post:
+      summary: Bind a driver mobile device
+      operationId: bindDriverDevice
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Device binding recorded } }
+  /platform/driver/undertaking:
+    get:
+      summary: Read the versioned fourteen-point driver undertaking
+      operationId: getDriverUndertaking
+      responses: { '200': { description: Undertaking version and items } }
+  /platform/driver/documents:
+    post:
+      summary: Append a new version of an own driver document
+      operationId: uploadDriverDocument
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Driver document version created } }
+  /platform/driver/vehicles:
+    post:
+      summary: Register an own tractor or trailer
+      operationId: registerDriverVehicle
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Vehicle registered } }
+  /platform/driver/opportunities:
+    get:
+      summary: List invitation-scoped internal Company Y opportunities
+      operationId: listDriverOpportunities
+      responses: { '200': { description: Limited internal opportunity read model } }
+  /platform/driver/opportunities/{rfqId}/bid:
+    post:
+      summary: Save or submit an internal driver bid inside Company Y
+      operationId: submitDriverInternalBid
+      parameters: [{ $ref: '#/components/parameters/RfqId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Internal bid recorded; no direct X to Driver award is created } }
+  /platform/driver/trips:
+    get:
+      summary: List only trips assigned to the authenticated driver
+      operationId: listDriverTrips
+      responses: { '200': { description: Own-trip read model } }
+  /platform/driver/trips/{tripId}:
+    get:
+      summary: Read an assigned trip with readiness, travel documents and delivery scope
+      operationId: getDriverTrip
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: Driver trip detail } }
+  /platform/driver/trips/{tripId}/accept:
+    post:
+      summary: Accept an assigned trip with the versioned undertaking
+      operationId: acceptDriverTrip
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Acceptance is device and version audited } }
+  /platform/driver/trips/{tripId}/check-in:
+    post:
+      summary: Record arrival at origin with server geofence result
+      operationId: driverCheckIn
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Arrival evidence recorded } }
+  /platform/driver/trips/{tripId}/preload-checklist:
+    post:
+      summary: Record the critical preload checklist
+      operationId: submitDriverPreloadChecklist
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Checklist evidence recorded } }
+  /platform/driver/trips/{tripId}/location-batch:
+    post:
+      summary: Idempotent offline GPS batch with spoof-signal review
+      operationId: syncDriverLocations
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: GPS points accepted and anomalies flagged } }
+  /platform/driver/trips/{tripId}/border-events:
+    post:
+      summary: Record a quick border or customs event
+      operationId: recordDriverBorderEvent
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Border event recorded } }
+  /platform/driver/trips/{tripId}/destination-arrival:
+    post:
+      summary: Record arrival at the authorized destination
+      operationId: recordDriverDestinationArrival
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Destination event recorded } }
+  /platform/driver/trips/{tripId}/incidents:
+    get:
+      summary: Read incidents for an own trip
+      operationId: getDriverIncidents
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: Own-trip incidents } }
+    post:
+      summary: Report breakdown, accident, seal or route incident
+      operationId: reportDriverIncident
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Incident and risk notification recorded } }
+  /platform/driver/trips/{tripId}/delivery:
+    get:
+      summary: Read authorized consignee and delivery/POD scope
+      operationId: getDriverDelivery
+      parameters: [{ $ref: '#/components/parameters/TripId' }]
+      responses: { '200': { description: Authorized recipient read model } }
+  /platform/driver/trips/{tripId}/delivery/otp/request:
+    post:
+      summary: Request a server-issued delivery OTP challenge
+      operationId: requestDeliveryOtp
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: OTP challenge created } }
+  /platform/driver/trips/{tripId}/delivery/otp/verify:
+    post:
+      summary: Verify the delivery OTP challenge
+      operationId: verifyDeliveryOtp
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '200': { description: OTP verified or rejected } }
+  /platform/driver/trips/{tripId}/claims:
+    post:
+      summary: Open an own-trip driver claim
+      operationId: openDriverClaim
+      parameters: [{ $ref: '#/components/parameters/TripId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Claim opened and audited } }
+  /platform/driver/settlements:
+    get:
+      summary: Read only the Y-Driver relationship ledger
+      operationId: getDriverSettlements
+      responses: { '200': { description: Own settlement read model } }
+  /platform/driver/settlements/{settlementId}/dispute:
+    post:
+      summary: Dispute an own Y-Driver settlement
+      operationId: disputeDriverSettlement
+      parameters: [{ $ref: '#/components/parameters/SettlementId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: Settlement dispute opened } }
+  /platform/admin/dashboard:
+    get:
+      summary: Read the purpose-scoped, aggregate governance dashboard without quote bodies
+      operationId: getAdminGovernanceDashboard
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Aggregate governance metrics and sealed RFQ metadata } }
+  /platform/admin/organizations:
+    get:
+      summary: Search tenant-scoped organizations with minimum necessary governance fields
+      operationId: getAdminOrganizations
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Organization governance read model } }
+  /platform/admin/users:
+    get:
+      summary: Search scoped memberships without raw contact data
+      operationId: getAdminUsers
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Membership governance read model } }
+  /platform/admin/users/{userId}/sessions/revoke:
+    post:
+      summary: Revoke active sessions for a scoped user with security audit
+      operationId: revokeAdminUserSessions
+      parameters: [{ $ref: '#/components/parameters/UserId' }, { $ref: '#/components/parameters/IdempotencyKey' }, { $ref: '#/components/parameters/StepUpToken' }]
+      responses: { '200': { description: Sessions revoked and audited } }
+  /platform/admin/memberships/{membershipId}/status:
+    patch:
+      summary: Lock or suspend a membership with step-up and audit
+      operationId: updateAdminMembershipStatus
+      parameters: [{ $ref: '#/components/parameters/MembershipId' }, { $ref: '#/components/parameters/IdempotencyKey' }, { $ref: '#/components/parameters/StepUpToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [active, suspended, locked] }
+      responses: { '200': { description: Membership status updated and audited } }
+  /platform/admin/marketplace:
+    get:
+      summary: Monitor RFQ1/RFQ2 seal and award metadata without quote content
+      operationId: getAdminMarketplaceGovernance
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Isolated marketplace governance read model } }
+  /platform/admin/trips:
+    get:
+      summary: Read minimum necessary trip governance state
+      operationId: getAdminTripGovernance
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Trip governance read model } }
+  /platform/admin/qualification:
+    get:
+      summary: Read human KYC and qualification queues
+      operationId: getAdminQualificationQueue
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Qualification queues } }
+  /platform/admin/qualification/{kind}/{id}/decision:
+    post:
+      summary: Record a human qualification decision with reason and audit
+      operationId: decideAdminQualification
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminQualificationDecision'
+      responses: { '201': { description: Qualification decision recorded }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /platform/admin/cases:
+    get:
+      summary: Read role-scoped risk, compliance, conflict and security queues
+      operationId: getAdminGovernanceCases
+      responses: { '200': { description: Role-scoped governance cases } }
+    post:
+      summary: Open a human-review governance case
+      operationId: openAdminGovernanceCase
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCaseInput'
+      responses: { '201': { description: Governance case opened and audited } }
+  /platform/admin/cases/{caseId}:
+    patch:
+      summary: Update a role-scoped governance case; critical transitions require step-up
+      operationId: updateAdminGovernanceCase
+      parameters: [{ $ref: '#/components/parameters/CaseId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                state: { type: string, enum: [OPEN, IN_REVIEW, RESOLVED, REJECTED, MONITOR, RESTRICTED, ESCALATED] }
+                outcome: { type: string }
+                remediation: { type: string }
+      responses: { '200': { description: Governance case updated and audited } }
+  /platform/admin/audit:
+    get:
+      summary: Search append-only audit events with commercial payload redaction
+      operationId: searchAdminAudit
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Append-only audit read model } }
+  /platform/admin/audit/{auditId}:
+    get:
+      summary: Read one tenant-scoped audit event
+      operationId: getAdminAuditEvent
+      parameters: [{ $ref: '#/components/parameters/AuditId' }, { $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Redacted immutable audit event } }
+  /platform/admin/break-glass:
+    get:
+      summary: Read controlled break-glass requests
+      operationId: getBreakGlassRequests
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Break-glass request queue } }
+    post:
+      summary: Request time-limited break-glass access
+      operationId: requestBreakGlass
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }, { $ref: '#/components/parameters/StepUpToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BreakGlassInput'
+      responses: { '201': { description: Break-glass request awaiting second approval } }
+  /platform/admin/break-glass/{requestId}/approve:
+    post:
+      summary: Approve a break-glass request as a distinct authorized person
+      operationId: approveBreakGlass
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }, { $ref: '#/components/parameters/StepUpToken' }]
+      responses: { '200': { description: Time-limited break-glass access activated } }
+  /platform/admin/break-glass/{requestId}/revoke:
+    post:
+      summary: Revoke an active break-glass request
+      operationId: revokeBreakGlass
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }, { $ref: '#/components/parameters/StepUpToken' }]
+      responses: { '200': { description: Break-glass access revoked and audited } }
+  /platform/admin/rulepacks:
+    get:
+      summary: Read versioned RulePacks and active state
+      operationId: getAdminRulePacks
+      responses: { '200': { description: Versioned RulePack read model } }
+    post:
+      summary: Create a Draft RulePack version
+      operationId: createAdminRulePack
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RulePackInput'
+      responses: { '201': { description: Draft RulePack created } }
+  /platform/admin/rulepacks/{rulePackId}/transition:
+    post:
+      summary: Move a RulePack through its human-approved lifecycle
+      operationId: transitionAdminRulePack
+      parameters: [{ $ref: '#/components/parameters/RulePackId' }, { $ref: '#/components/parameters/IdempotencyKey' }, { $ref: '#/components/parameters/StepUpToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state]
+              properties:
+                state: { type: string, enum: [REVIEW, APPROVED, SCHEDULED, ACTIVE, SUPERSEDED, ARCHIVED] }
+      responses: { '200': { description: RulePack transition recorded and audited } }
+  /platform/admin/pricing:
+    get:
+      summary: Read versioned pricing governance policies without commercial quote data
+      operationId: getAdminPricingPolicies
+      responses: { '200': { description: Pricing policy read model } }
+    post:
+      summary: Create a Draft pricing governance policy
+      operationId: createAdminPricingPolicy
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingPolicyInput'
+      responses: { '201': { description: Draft pricing policy created } }
+  /platform/admin/pricing/{policyId}/approve:
+    post:
+      summary: Approve a pricing policy as a distinct authorized person
+      operationId: approveAdminPricingPolicy
+      parameters: [{ $ref: '#/components/parameters/PolicyId' }, { $ref: '#/components/parameters/IdempotencyKey' }, { $ref: '#/components/parameters/StepUpToken' }]
+      responses: { '200': { description: Pricing policy approved } }
+  /platform/admin/pricing/{policyId}/activate:
+    post:
+      summary: Activate an approved pricing governance policy
+      operationId: activateAdminPricingPolicy
+      parameters: [{ $ref: '#/components/parameters/PolicyId' }, { $ref: '#/components/parameters/IdempotencyKey' }, { $ref: '#/components/parameters/StepUpToken' }]
+      responses: { '200': { description: Pricing policy activated without merging Market A and B price books } }
+  /platform/admin/finance:
+    get:
+      summary: Read relationship-scoped ledger aggregates for Finance Admin
+      operationId: getAdminFinanceGovernance
+      responses: { '200': { description: Relationship ledger governance aggregates } }
+  /platform/admin/exports:
+    get:
+      summary: Read governed export requests without export-all capability
+      operationId: getAdminExportRequests
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Governed export request read model } }
+  /platform/admin/claims:
+    get:
+      summary: Read minimum necessary claims and dispute governance state
+      operationId: getAdminClaims
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Claims and dispute read model without raw evidence } }
+  /platform/admin/contact-reveals:
+    get:
+      summary: Read temporary contact reveal audit records without contact values
+      operationId: getContactRevealAudit
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Contact reveal audit read model } }
+  /platform/admin/crm-governance:
+    get:
+      summary: Read L1/L2 CRM governance aggregates and campaign controls
+      operationId: getAdminCrmGovernance
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: CRM governance read model } }
+  /platform/admin/bi:
+    get:
+      summary: Read aggregated or anonymized BI and KPI data
+      operationId: getAdminBi
+      parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
+      responses: { '200': { description: Aggregated governance BI read model } }
+  /platform/admin/notification-policies:
+    get:
+      summary: Read notification governance policies
+      operationId: getNotificationPolicies
+      responses: { '200': { description: Notification policy read model } }
+  /platform/admin/notification-policies/{policyId}:
+    patch:
+      summary: Update a notification policy; critical policies cannot be disabled
+      operationId: updateNotificationPolicy
+      parameters: [{ $ref: '#/components/parameters/PolicyId' }, { $ref: '#/components/parameters/IdempotencyKey' }, { $ref: '#/components/parameters/StepUpToken' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                enabled: { type: boolean }
+                reason: { type: string, minLength: 8 }
+      responses: { '200': { description: Notification policy updated and audited } }
+  /platform/admin/integrations:
+    get:
+      summary: Read HMAC-protected integration endpoint health
+      operationId: getAdminIntegrations
+      responses: { '200': { description: Integration governance read model } }
+  /platform/admin/ai-monitor:
+    get:
+      summary: Read assistive AI/OCR quality, cost and human-override telemetry
+      operationId: getAdminAiMonitor
+      responses: { '200': { description: AI governance read model with binding actions disabled } }
+  /platform/admin/health:
+    get:
+      summary: Read technical health and backup/DR status without raw business data
+      operationId: getAdminSystemHealth
+      responses: { '200': { description: System health read model } }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    RfqId:
+      name: rfqId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    TripId:
+      name: tripId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    PodId:
+      name: podId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    ContractId:
+      name: contractId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    SettlementId:
+      name: settlementId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    ExportId:
+      name: exportId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    IdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, maxLength: 128 }
+    PurposeScope:
+      name: X-Purpose-Scope
+      in: header
+      required: false
+      schema: { type: string, minLength: 8, maxLength: 200 }
+    StepUpToken:
+      name: X-Step-Up-Token
+      in: header
+      required: false
+      schema: { type: string, maxLength: 2048 }
+    AuditId:
+      name: auditId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    RulePackId:
+      name: rulePackId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    PolicyId:
+      name: policyId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    MembershipId:
+      name: membershipId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+  responses:
+    Forbidden:
+      description: Authorization, ABAC, ownership or relationship boundary failed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+  schemas:
+    ProblemDetails:
+      type: object
+      required: [type, title, status, code, detail, correlationId]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string, example: AWD-403 }
+        detail: { type: string }
+        correlationId: { type: string }
+    PlatformContext:
+      type: object
+      properties:
+        tenantId: { type: string }
+        organizationId: { type: string }
+        membershipId: { type: integer }
+        role: { type: string }
+        permissions: { type: array, items: { type: string } }
+    AdminQualificationDecision:
+      type: object
+      required: [decision, reason]
+      properties:
+        decision: { type: string, enum: [APPROVE, REJECT, REQUEST_INFO, SUSPEND] }
+        reason: { type: string, minLength: 8, maxLength: 1000 }
+    AdminCaseInput:
+      type: object
+      required: [caseType, signal, reason]
+      properties:
+        caseType: { type: string, enum: [COMPLIANCE, RISK, CONFLICT, SECURITY, INCIDENT, SUPPORT, FINANCE, DISPUTE] }
+        signal: { type: string, minLength: 3, maxLength: 120 }
+        severity: { type: string, enum: [low, medium, high, critical] }
+        subjectOrgId: { type: string }
+        subjectType: { type: string }
+        subjectId: { type: string }
+        score: { type: number }
+        source: { type: string }
+        reason: { type: string, minLength: 8, maxLength: 1000 }
+        evidence: { type: object }
+    BreakGlassInput:
+      type: object
+      required: [targetType, reason, incidentRef]
+      properties:
+        targetType: { type: string, maxLength: 64 }
+        targetId: { type: string, maxLength: 128 }
+        targetTenantId: { type: string, maxLength: 64 }
+        scope: { type: object }
+        reason: { type: string, minLength: 12, maxLength: 1000 }
+        incidentRef: { type: string, minLength: 3, maxLength: 160 }
+        durationMinutes: { type: integer, minimum: 5, maximum: 60 }
+    RulePackInput:
+      type: object
+      required: [ruleKey, level, sourceType, sourceRef, rules]
+      properties:
+        ruleKey: { type: string, minLength: 3, maxLength: 120 }
+        versionNo: { type: integer, minimum: 1 }
+        level: { type: string, enum: [A, B, C, D] }
+        sourceType: { type: string, enum: [A, B, C, D] }
+        sourceRef: { type: string, minLength: 3, maxLength: 500 }
+        validFrom: { type: string, format: date-time }
+        validTo: { type: string, format: date-time }
+        routeScope: { type: object }
+        cargoScope: { type: object }
+        hardGate: { type: boolean }
+        rules: { type: object }
+    PricingPolicyInput:
+      type: object
+      required: [policyKey, allowedComponents]
+      properties:
+        policyKey: { type: string, minLength: 3, maxLength: 120 }
+        versionNo: { type: integer, minimum: 1 }
+        allowedComponents: { type: array, minItems: 1, items: { type: string } }
+        platformFee: { type: object }
+        rateRange: { type: object }
+        fxSource: { type: object }
+        validUntilRules: { type: object }
+        outlierPolicy: { type: object }
+    CargoRequest:
+      type: object
+      properties:
+        direction: { type: string, enum: [EXPORT, IMPORT] }
+        origin: { type: object, required: [location], properties: { country: { type: string }, location: { type: string } } }
+        destination: { type: object, required: [location], properties: { country: { type: string }, location: { type: string } } }
+        cargo: { type: object, required: [type], properties: { type: { type: string }, description: { type: string }, weight: { type: number }, unit: { type: string } } }
+    QuoteInput:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: number, exclusiveMinimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        terms: { type: object }
+        state: { type: string, enum: [DRAFT, SUBMITTED], default: SUBMITTED }
+        submit: { type: boolean, default: true }
+        pricing: { $ref: '#/components/schemas/CompanyXPricing' }
+        qualificationState: { type: string, enum: [qualified] }
+        isAiAssisted: { type: boolean }
+    CompanyXPricing:
+      type: object
+      properties:
+        estimatedRate: { type: number, minimum: 0 }
+        suggestedRate: { type: number, minimum: 0 }
+        firmRate: { type: number, minimum: 0 }
+        conditionalRate: { type: number, minimum: 0 }
+        costComponents: { type: array, items: { type: object } }
+        xMargin: { type: number, minimum: 0 }
+        platformFee: { type: number, minimum: 0 }
+        priceRisk: { type: string }
+        outlier: { type: boolean }
+        outlierReason: { type: string }
+    LoadingScheduleInput:
+      type: object
+      properties:
+        schedule:
+          type: object
+          required: [checkInAt]
+          properties:
+            checkInAt: { type: string, format: date-time }
+            loadingWindow: { type: string }
+            location: { type: string }
+            notes: { type: string }
+    LoadingEvidenceInput:
+      type: object
+      required: [evidenceType]
+      properties:
+        evidenceType: { type: string, enum: [ARRIVAL, PRELOAD_CHECKLIST, LOADING_LIST, SCALE_TICKET, SEAL, LOADING_PHOTO] }
+        fileRef: { type: string }
+        fileHash: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        deviceRef: { type: string }
+        occurredAt: { type: string, format: date-time }
+        geo: { type: object, properties: { lat: { type: number }, lng: { type: number } } }
+        mismatch: { type: boolean }
+        mismatchReason: { type: string }
+        metadata: { type: object }
+    ExceptionInput:
+      type: object
+      required: [exceptionType, reason]
+      properties:
+        exceptionType: { type: string }
+        severity: { type: string, enum: [low, medium, high, critical] }
+        reason: { type: string, minLength: 8 }
+        evidence: { type: object }
+    VehicleInput:
+      type: object
+      required: [plateNumber]
+      properties:
+        plateNumber: { type: string }
+        vehicleType: { type: string }
+        capacity: { type: number, minimum: 0 }
+        cargoScope: { oneOf: [{ type: array, items: { type: string } }, { type: string }] }
+        reeferCapable: { type: boolean }
+        specialCapability: { type: string }
+        ownerRelation: { type: string }
+        routePermits: { type: object }
+    AwardInput:
+      type: object
+      required: [winnerOrgId, reason]
+      properties:
+        winnerOrgId: { type: string }
+        reason: { type: string, minLength: 8 }
+    PodEvidence:
+      type: object
+      required: [evidence]
+      properties:
+        evidence:
+          type: object
+          required: [recipientOrgId, authorityRef, receivedAt, location, photos, signedCmrRef]
+          properties:
+            recipientOrgId: { type: string }
+            authorityRef: { type: string }
+            receivedAt: { type: string, format: date-time }
+            location: { type: object, required: [lat, lng], properties: { lat: { type: number }, lng: { type: number } } }
+            photos: { type: array, minItems: 1, items: { type: string } }
+            signedCmrRef: { type: string }
+            otpVerified: { type: boolean }
+    AgentDeliveryVerification:
+      type: object
+      required: [cmrRef, location, checklist]
+      properties:
+        outcome: { type: string, enum: [VERIFIED, MISMATCH, HOLD, ESCALATE] }
+        recipientOrgId: { type: string }
+        representativeRef: { type: string }
+        authorityRef: { type: string }
+        cmrRef: { type: string }
+        location: { type: object, required: [lat, lng], properties: { lat: { type: number }, lng: { type: number }, accuracy: { type: number } } }
+        checklist: { type: object, required: [correctShipment, correctCmr, correctRecipient], properties: { correctShipment: { type: boolean }, correctCmr: { type: boolean }, correctRecipient: { type: boolean } } }
+        packageCount: { type: integer, minimum: 0 }
+        sealState: { type: string }
+        signatureRef: { type: string }
+        stampRef: { type: string }
+        reason: { type: string }
+        outsideReason: { type: string }
+    AgentAssignmentInput:
+      type: object
+      required: [authorizedAgentOrgId, authorityRef]
+      properties:
+        authorizedAgentOrgId: { type: string }
+        authorityRef: { type: string, minLength: 1 }
+        authorityDocumentId: { type: integer, minimum: 1 }
+        validFrom: { type: string, format: date-time }
+        validTo: { type: string, format: date-time }
+        scope: { type: object }
+        permittedActions: { type: array, items: { type: string } }
+        reportingOrgId: { type: string }
+    AgentEvidenceInput:
+      type: object
+      required: [evidenceType, fileRef, fileHash]
+      properties:
+        evidenceType: { type: string, enum: [VEHICLE_AT_DESTINATION, SEAL_BEFORE_OPENING, CARGO_BEFORE_UNLOAD, UNLOADING, CARGO_AFTER_UNLOAD, DAMAGE, WAREHOUSE, RECEIPT, SIGNATURE, STAMP] }
+        fileRef: { type: string }
+        fileHash: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        occurredAt: { type: string, format: date-time }
+        geo: { type: object, properties: { lat: { type: number }, lng: { type: number } } }
+        note: { type: string }
+    AgentDocumentInput:
+      type: object
+      required: [docType, fileRef, fileHash]
+      properties:
+        docType: { type: string, enum: [AGENT_AUTHORITY, SIGNED_CMR, WAREHOUSE_RECEIPT, UNLOADING_RECEIPT, DESTINATION_RECEIPT, RELEASE_DOCUMENT, CLEARANCE_DOCUMENT, DOMESTIC_POD, INCIDENT_DOCUMENT] }
+        fileRef: { type: string }
+        fileHash: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        sensitivity: { type: string, enum: [P0, P1, P2, P3] }
+        metadata: { type: object }
+    Dashboard:
+      type: object
+      properties:
+        actor: { type: object }
+        metrics: { type: object }
+        cases: { type: array, items: { type: object } }
+        trips: { type: array, items: { type: object } }

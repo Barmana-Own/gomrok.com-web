@@ -1,6 +1,7 @@
 {
   "name": "gomrok-dot-org",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "workspaces": [
     "client",
@@ -10,6 +11,7 @@
     "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "npm --workspace client run dev",
     "dev:server": "npm --workspace server run dev",
+    "test": "npm --workspace server test",
     "build": "npm --workspace client run build",
     "start": "npm --workspace server run start"
   },

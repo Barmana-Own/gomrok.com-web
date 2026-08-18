@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { provinces } from './data/iranLocations.js';
+import PlatformWorkspace from './components/PlatformWorkspace.jsx';
+const AdminGovernancePanel = lazy(() => import('./components/AdminGovernancePanel.jsx'));
 
 const APP_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? APP_BASE : 'http://127.0.0.1:4000');
@@ -30,6 +32,10 @@ const emptyCarrierRegistration = {
   phone: '',
   province: ''
 };
+
+function readSessionUser() {
+  try { return JSON.parse(sessionStorage.getItem('gomrok-session-user') || 'null'); } catch (_error) { return null; }
+}
 
 async function apiRequest(path, options = {}) {
   const response = await fetch(`${API_URL}${path}`, {
@@ -240,7 +246,7 @@ function LoginPage({ initialRole = 'driver', onRoleChange, onDriverRegister, onC
         method: 'POST',
         body: JSON.stringify({ phone, password })
       });
-      onLoggedIn(result.user);
+      onLoggedIn(result.user, result.token, result.refreshToken);
     } catch (error) {
       setNotice(error.message);
     } finally {
@@ -565,7 +571,7 @@ function AdminUserCard({ item, type, busyKey, onAction, onEdit }) {
           <button className="admin-action admin-action--primary" type="button" onClick={() => onAction(item, role, primaryAction)} disabled={Boolean(busyKey)}>{primaryBusy ? 'در حال انجام…' : primaryLabel}</button>
           {item.status === 'pending' && <button className="admin-action admin-action--muted" type="button" onClick={() => onAction(item, role, 'reject')} disabled={Boolean(busyKey)}>رد درخواست</button>}
           <button className="admin-action" type="button" onClick={() => onEdit(item, role)} disabled={Boolean(busyKey)}>ویرایش</button>
-          <button className="admin-action admin-action--danger" type="button" onClick={() => onAction(item, role, 'delete')} disabled={Boolean(busyKey)}>حذف</button>
+          <button className="admin-action admin-action--danger" type="button" onClick={() => onAction(item, role, 'delete')} disabled={Boolean(busyKey)}>آرشیو غیرمخرب</button>
         </div>
       </div>
     </article>
@@ -620,31 +626,6 @@ function AdminPage() {
   const [editing, setEditing] = useState(null);
   const [editNotice, setEditNotice] = useState('');
 
-  useEffect(() => {
-    if (!token) return undefined;
-    let alive = true;
-    setLoading(true);
-    setNotice('');
-    const headers = { Authorization: `Bearer ${token}` };
-    Promise.allSettled([
-      apiRequest('/api/admin/summary', { headers }),
-      apiRequest('/api/admin/registrations/drivers', { headers }),
-      apiRequest('/api/admin/registrations/carriers', { headers })
-    ]).then(([summaryResult, driversResult, carriersResult]) => {
-      if (!alive) return;
-      const failed = [summaryResult, driversResult, carriersResult].find((result) => result.status === 'rejected');
-      if (summaryResult.status === 'fulfilled') setSummary(summaryResult.value);
-      if (driversResult.status === 'fulfilled') setDrivers(driversResult.value.items || []);
-      if (carriersResult.status === 'fulfilled') setCarriers(carriersResult.value.items || []);
-      if (failed) {
-        setNoticeTone('error');
-        setNotice(failed.reason?.message || 'دریافت اطلاعات پنل انجام نشد.');
-      }
-      setLoading(false);
-    });
-    return () => { alive = false; };
-  }, [token, refreshNonce]);
-
   const login = async (event) => {
     event.preventDefault();
     setBusy(true);
@@ -665,7 +646,7 @@ function AdminPage() {
 
   const performAction = async (item, role, action) => {
     const key = `${role}-${item.id}-${action}`;
-    if (action === 'delete' && !window.confirm('اطلاعات این کاربر و حساب مرتبط حذف شود؟')) return;
+    if (action === 'delete' && !window.confirm('این رکورد به‌صورت غیرمخرب غیرفعال شود؟')) return;
     setBusyKey(key);
     setNoticeTone('success');
     setNotice('');
@@ -703,36 +684,9 @@ function AdminPage() {
     }
   };
 
-  const downloadExport = async () => {
-    const role = activeTab === 'drivers' ? 'driver' : 'carrier';
-    setBusyKey(`export-${role}`);
-    try {
-      const response = await fetch(`${API_URL}/api/admin/registrations/${role}/export`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.message || 'خروجی اکسل آماده نشد.');
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = role === 'driver' ? 'gomrok-drivers.xls' : 'gomrok-carriers.xls';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      setNoticeTone('success');
-      setNotice('خروجی اکسل آماده و دانلود شد.');
-    } catch (error) {
-      setNoticeTone('error');
-      setNotice(error.message);
-    } finally {
-      setBusyKey('');
-    }
-  };
-
   const logout = () => {
     sessionStorage.removeItem('gomrok-admin-token');
+    sessionStorage.removeItem('gomrok-admin-step-up-token');
     setToken('');
     setDrivers([]);
     setCarriers([]);
@@ -740,6 +694,8 @@ function AdminPage() {
   };
 
   if (!token) return <AdminLoginPage form={form} setForm={setForm} busy={busy} notice={notice} onSubmit={login} />;
+
+  return <Suspense fallback={<div className="platform-loading" dir="rtl">در حال آماده‌سازی پنل مدیریت…</div>}><AdminGovernancePanel user={{ role: 'super_admin', tenantId: 'platform', organizationId: 'platform' }} token={token} apiUrl={API_URL} onLogout={logout} /></Suspense>;
 
   const items = activeTab === 'drivers' ? drivers : carriers;
   const pendingCount = activeTab === 'drivers' ? summary.pendingDrivers : summary.pendingCarriers;
@@ -772,7 +728,7 @@ function AdminPage() {
               <button type="button" className={activeTab === 'carriers' ? 'admin-stat admin-stat--active' : 'admin-stat'} onClick={() => setActiveTab('carriers')}><span>باربری‌ها</span><strong>{summary.carriers}</strong><small>{summary.pendingCarriers || 0} در انتظار تأیید</small></button>
             </section>
             <section className="admin-list-section">
-              <div className="admin-list-heading"><div><h2>{activeTab === 'drivers' ? 'فهرست راننده‌ها' : 'فهرست باربری‌ها'}</h2><span>{items.length} مورد · {pendingCount || 0} در انتظار · {activeCount || 0} فعال</span></div><div className="admin-list-actions"><button type="button" onClick={downloadExport} disabled={Boolean(busyKey)}>{busyKey === `export-${activeTab === 'drivers' ? 'driver' : 'carrier'}` ? 'در حال آماده‌سازی…' : 'خروجی اکسل'}</button><button type="button" onClick={refresh} disabled={loading || Boolean(busyKey)}>{loading ? 'در حال بروزرسانی…' : 'بروزرسانی'}</button></div></div>
+              <div className="admin-list-heading"><div><h2>{activeTab === 'drivers' ? 'فهرست راننده‌ها' : 'فهرست باربری‌ها'}</h2><span>{items.length} مورد · {pendingCount || 0} در انتظار · {activeCount || 0} فعال</span></div><div className="admin-list-actions"><button type="button" onClick={refresh} disabled={loading || Boolean(busyKey)}>{loading ? 'در حال بروزرسانی…' : 'بروزرسانی'}</button></div></div>
               {notice && <p className={`admin-notice admin-notice--${noticeTone}`}>{notice}</p>}
               {!loading && !items.length && <div className="admin-empty"><b>هنوز داده‌ای برای نمایش نیست</b><span>بعد از ثبت فرم، اطلاعات کاربر در این بخش دیده می‌شود.</span></div>}
               <div className="admin-user-list">{items.map((item) => <AdminUserCard key={`${activeTab}-${item.id}`} item={item} type={activeTab} busyKey={busyKey} onAction={performAction} onEdit={(nextItem, nextRole) => { setEditNotice(''); setEditing({ item: nextItem, role: nextRole }); }} />)}</div>
@@ -794,7 +750,8 @@ export default function App() {
   const initialRole = initialPath.startsWith('/carrier') || initialPath === '/app/careers' ? 'carrier' : 'driver';
   const [page, setPage] = useState(initialPage);
   const [loginRole, setLoginRole] = useState(initialRole);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(readSessionUser);
+  const [token, setToken] = useState(() => sessionStorage.getItem('gomrok-session-token') || '');
   const [registration, setRegistration] = useState(null);
 
   const navigateAuth = (nextPage, nextRole) => {
@@ -805,7 +762,7 @@ export default function App() {
   };
 
   if (registration) return <RegistrationSubmittedPage registration={registration} onBack={() => { setRegistration(null); navigateAuth('role-select'); }} />;
-  if (user) return <MaintenancePage user={user} onLogout={() => { setUser(null); navigateAuth('login', user.role === 'carrier' ? 'carrier' : 'driver'); }} />;
+  if (user && token) return <PlatformWorkspace user={user} token={token} apiUrl={API_URL} onLogout={() => { sessionStorage.removeItem('gomrok-session-token'); sessionStorage.removeItem('gomrok-refresh-token'); sessionStorage.removeItem('gomrok-session-user'); sessionStorage.removeItem('gomrok-admin-step-up-token'); setToken(''); setUser(null); navigateAuth('login', user.role === 'carrier' ? 'carrier' : 'driver'); }} />;
   if (page === 'admin') return <AdminPage />;
   if (page === 'role-select') return <RoleSelectionPage onDriverRegister={() => navigateAuth('driver-register', 'driver')} onCarrierRegister={() => navigateAuth('carrier-register', 'carrier')} />;
   if (page === 'driver-register') return <RegisterPage onBack={() => navigateAuth('role-select')} onRegistered={setRegistration} />;
@@ -816,7 +773,7 @@ export default function App() {
       onRoleChange={(nextRole) => navigateAuth('login', nextRole)}
       onDriverRegister={() => navigateAuth('driver-register', 'driver')}
       onCarrierRegister={() => navigateAuth('carrier-register', 'carrier')}
-      onLoggedIn={setUser}
+      onLoggedIn={(nextUser, nextToken, nextRefreshToken) => { sessionStorage.setItem('gomrok-session-token', nextToken); sessionStorage.setItem('gomrok-session-user', JSON.stringify(nextUser)); if (nextRefreshToken) sessionStorage.setItem('gomrok-refresh-token', nextRefreshToken); setToken(nextToken); setUser(nextUser); }}
     />
   );
 }

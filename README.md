@@ -20,10 +20,13 @@ Mobile-first customs and transport platform foundation.
 2. Start MySQL in Docker:
 
    ```bash
+   cp .env.example .env
+   cp server/.env.example server/.env
+   # Replace every replace-* value with locally generated secrets.
    docker compose up -d mysql
    ```
 
-   The local Compose password is `gomrok_dev_only_change_me`. Set `DB_PASSWORD` to the same value in `server/.env` (and keep `DB_PORT=3306`). Change it before sharing the environment.
+   `MYSQL_ROOT_PASSWORD` in the root `.env` must equal `DB_PASSWORD` in `server/.env`. No username or password is committed to this repository; generate values with `openssl rand -base64 36` and keep both `.env` files private.
 
 3. Create the database tables:
 
@@ -39,7 +42,29 @@ Mobile-first customs and transport platform foundation.
 
 The React mobile app runs on `http://127.0.0.1:5083`. The API runs on `http://127.0.0.1:4000`.
 
-The current `/app/driver` and `/app/careers` flows collect the requested base information as pending registration requests. An admin must approve a request before the driver or carrier account is created. The admin workspace at `/admin/v2` has separate راننده‌ها and باربری‌ها sections and supports editing, approval, rejection, enable/disable, deletion and separate Excel-compatible exports.
+The current `/app/driver` and `/app/careers` flows collect the requested base information as pending registration requests. An admin must approve a request before the driver or carrier account is created. The `/admin/v2` workspace is the Marketplace Governance console: staff roles, tenant-scoped organizations, human KYC/qualification decisions, sealed RFQ monitoring, risk/compliance/conflict queues, append-only audit, dual-control Break-Glass, versioned RulePacks, relationship-ledger governance, contact-reveal/export oversight, AI monitor and technical health are separately authorized by the server.
+
+## Shared platform contract foundation
+
+The shared contract is implemented in `shared/contract.js` and consumed by the server domain policy and client workspace. It provides canonical roles, permissions, RFQ levels, state graphs, relationship boundaries, error codes and event names for the six surfaces.
+
+The tenant-scoped platform API is mounted under `/api/platform` and includes cargo cases, isolated RFQ1/RFQ2 books, human award, Company Y nomination, readiness-gated trip start, GPS events, versioned documents, CMR draft/final flow, authorized-recipient POD review, relationship-scoped settlement, masked contact reveal, governed export approval and append-only audit read models. The contract-facing OpenAPI file is `openapi/gomrok-platform-v1.yaml`.
+
+The Shipper / Customer surface is implemented in `client/src/components/ShipperPanel.jsx`. Its server-owned eight-step draft wizard, RFQ1 sealed comparison, delegated human award, Customer-X contract versioning, CMR review, least-privilege tracking/POD, relationship-scoped finance, claims/disputes and notifications use the platform routes. Shipper logistics approvals require explicit `organization_memberships.delegation_json`; finance memberships do not receive trip or raw-location mutation permissions.
+
+The Driver surface is implemented in `client/src/components/DriverMobilePanel.jsx` as an installable RTL mobile web app. It binds a device, keeps a local action queue for offline GPS/evidence drafts, limits read models to the assigned driver, and uses server-gated undertaking acceptance, check-in, preload evidence, active-trip tracking, authorized-recipient OTP/POD, Y-Driver settlement and claims workflows.
+
+The Agent/Z destination surface is implemented in `client/src/components/AgentPanel.jsx`. It is assignment- and authority-scoped, binds the Agent device, separates destination verification from POD acceptance, appends versioned photos/signature/stamp/CMR/warehouse evidence, supports audited delivery OTP, discrepancy and claim evidence, and exposes only the X-Agent settlement relationship.
+
+The Admin / Marketplace Governance surface is implemented in `client/src/components/AdminGovernancePanel.jsx` and `server/src/routes/admin.routes.js`. Super Admin is not granted blanket commercial access: quote bodies and raw contacts remain redacted, RFQ governance exposes only seal/deadline/access metadata, RulePacks cannot be silently edited, critical notifications cannot be disabled, and high-risk actions require an attributable step-up token plus idempotency key.
+
+Sensitive platform writes require `X-Idempotency-Key`. Access JWTs are short-lived and `/api/auth/refresh` rotates refresh tokens. Platform JWTs are tied to an active organization membership; the server derives tenant and organization scope from that membership rather than trusting request payloads.
+
+All six surfaces share the same tenant-scoped API and domain event stream. `/api/platform/realtime` is an authenticated SSE stream for safe event metadata; each panel falls back to bounded polling when the stream is unavailable. The MVP broker is process-local, so production horizontal scaling requires a shared pub/sub adapter before running multiple API instances.
+
+## Developer handoff
+
+See [`docs/NEXT-DEVELOPER.md`](docs/NEXT-DEVELOPER.md) for the surface-by-surface contract map, environment setup, API gaps, test commands, security boundaries, realtime behavior and deployment checklist. See [`docs/SECURITY-AUDIT.md`](docs/SECURITY-AUDIT.md) for the bounded security audit and remaining release gates. Credentials are provisioned through environment variables or the registration approval response and are intentionally not stored in documentation or source control.
 
 Carrier auth endpoints:
 
@@ -53,7 +78,6 @@ Registration endpoints:
 - `PATCH /api/admin/registrations/:role/:id/status`
 - `PUT /api/admin/registrations/:role/:id`
 - `DELETE /api/admin/registrations/:role/:id`
-- `GET /api/admin/registrations/:role/export`
 
 ## Production app path
 

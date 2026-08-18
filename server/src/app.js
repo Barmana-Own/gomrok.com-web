@@ -1,15 +1,20 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import 'dotenv/config';
 import { pingDatabase, pool } from './db.js';
+import platformRouter from './routes/platform.routes.js';
+import adminRouter from './routes/admin.routes.js';
+import { ADMIN_PASSWORD, ADMIN_USERNAME, IS_PRODUCTION, JWT_SECRET } from './config.js';
+import { idempotencyKey, platformAuth } from './security/platform-auth.js';
+import { PERMISSIONS, ROLES } from '../../shared/contract.js';
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
-const jwtSecret = process.env.JWT_SECRET || 'development-only-change-me';
-const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-const adminPassword = process.env.ADMIN_PASSWORD || 'GomrokAdmin#2026';
+const jwtSecret = JWT_SECRET;
+const adminUsername = ADMIN_USERNAME;
+const adminPassword = ADMIN_PASSWORD;
 
 const configuredOrigins = String(process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || '')
   .split(',')
@@ -18,14 +23,41 @@ const configuredOrigins = String(process.env.CLIENT_ORIGINS || process.env.CLIEN
 const allowedOrigins = new Set([
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
+  'http://127.0.0.1:5083',
   'http://localhost:5173',
   'http://localhost:5174',
+  'http://localhost:5083',
   'http://gomrok.org',
   'https://gomrok.org',
   'http://www.gomrok.org',
   'https://www.gomrok.org',
   ...configuredOrigins
 ]);
+
+const authAttempts = new Map();
+const AUTH_WINDOW_MS = 60_000;
+const AUTH_MAX_ATTEMPTS = 12;
+
+function authRateLimit(request, response, next) {
+  const now = Date.now();
+  const address = String(request.socket?.remoteAddress || 'unknown');
+  const key = `${address}:${request.path}`;
+  const current = authAttempts.get(key) || { count: 0, startedAt: now };
+  if (now - current.startedAt >= AUTH_WINDOW_MS) {
+    current.count = 0;
+    current.startedAt = now;
+  }
+  current.count += 1;
+  authAttempts.set(key, current);
+  if (authAttempts.size > 10000) {
+    for (const [entryKey, entry] of authAttempts) if (now - entry.startedAt >= AUTH_WINDOW_MS) authAttempts.delete(entryKey);
+  }
+  if (current.count > AUTH_MAX_ATTEMPTS) {
+    response.setHeader('Retry-After', '60');
+    return response.status(429).json({ code: 'AUTH-429', message: 'تعداد تلاش‌های ورود بیش از حد مجاز است.' });
+  }
+  return next();
+}
 
 // Keep the API usable from the local development host and from the deployed
 // same-origin app. Handling preflight explicitly is important here because
@@ -48,11 +80,16 @@ app.use((request, response, next) => {
 
   if (request.method === 'OPTIONS') {
     response.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-    response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Correlation-Id, X-Idempotency-Key, X-Purpose-Scope, X-Device-Id, X-Step-Up-Token, X-Step-Up');
     return response.status(204).end();
   }
 
   return next();
+});
+app.use((request, response, next) => {
+  request.correlationId = String(request.headers['x-correlation-id'] || randomBytes(12).toString('hex')).slice(0, 128);
+  response.setHeader('X-Correlation-Id', request.correlationId);
+  next();
 });
 app.use(express.json({ limit: '64kb' }));
 
@@ -66,8 +103,17 @@ function digits(value = '') {
   return normalizeDigits(value).replace(/\D/g, '');
 }
 
-function issueToken(account, role = 'driver') {
-  return jwt.sign({ sub: String(account.id), role, tenantId: account.tenant_id }, jwtSecret, { expiresIn: '8h' });
+function issueToken(account, role = 'driver', membership = {}) {
+  return jwt.sign({
+    sub: String(account.id),
+    userId: membership.userId || account.id,
+    membershipId: membership.membershipId || null,
+    organizationId: membership.organizationId || null,
+    externalType: membership.externalType || role,
+    externalId: membership.externalId || account.id,
+    role,
+    tenantId: account.tenant_id
+  }, jwtSecret, { expiresIn: '15m' });
 }
 
 function issueAdminToken() {
@@ -75,6 +121,7 @@ function issueAdminToken() {
 }
 
 function requireAdmin(request, response, next) {
+  if (IS_PRODUCTION) return response.status(410).json({ code: 'AUTH-410', message: 'مسیر Legacy Admin در محیط تولید غیرفعال است؛ از IAM سازمانی استفاده کنید.' });
   const authorization = String(request.headers.authorization || '');
   const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
   if (!token) return response.status(401).json({ message: 'ورود مدیر سیستم لازم است.' });
@@ -82,6 +129,9 @@ function requireAdmin(request, response, next) {
   try {
     const claims = jwt.verify(token, jwtSecret);
     if (claims.role !== 'super_admin') return response.status(403).json({ message: 'دسترسی پنل مدیریت مجاز نیست.' });
+    const purpose = String(request.headers['x-purpose-scope'] || '').trim();
+    if (purpose.length < 8) return response.status(428).json({ code: 'AUTH-428', message: 'دسترسی Legacy Admin نیز به Purpose Scope نیاز دارد.' });
+    claims.purpose = purpose;
     request.admin = claims;
     return next();
   } catch (_error) {
@@ -142,6 +192,35 @@ function publicRegistration(row) {
     updatedAt: row.updated_at,
     source: 'registration',
     label: isDriver ? 'راننده' : 'کرییر'
+  };
+}
+
+function maskAdminValue(value, visible = 2) {
+  const text = String(value || '');
+  if (!text) return null;
+  if (text.length <= visible) return '*'.repeat(text.length);
+  return `${text.slice(0, visible)}${'*'.repeat(Math.min(Math.max(text.length - visible, 3), 8))}`;
+}
+
+function publicAdminRegistration(row) {
+  return {
+    id: row.id,
+    role: row.role,
+    firstName: row.first_name || null,
+    lastName: row.last_name || null,
+    businessName: row.business_name || null,
+    phone: maskAdminValue(row.phone, 3),
+    nationalId: maskAdminValue(row.national_id, 2),
+    registrationNumber: maskAdminValue(row.registration_number, 2),
+    nationalIdentifier: maskAdminValue(row.national_identifier, 2),
+    province: row.province || null,
+    status: row.status,
+    accountId: row.account_id,
+    accountCreated: Boolean(row.account_id),
+    approvedAt: row.approved_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    source: 'legacy-registration-governance'
   };
 }
 
@@ -301,9 +380,13 @@ app.get('/api/health', async (_request, response) => {
   }
 });
 
-app.post('/api/admin/login', (request, response) => {
+app.post('/api/admin/login', authRateLimit, (request, response) => {
+  if (IS_PRODUCTION) return response.status(410).json({ code: 'AUTH-410', message: 'ورود Legacy Admin در محیط تولید غیرفعال است.' });
   const username = String(request.body?.username || '').trim();
   const password = String(request.body?.password || '');
+  if (!adminPassword) {
+    return response.status(503).json({ code: 'AUTH-503', message: 'ورود مدیر تا زمان تنظیم ADMIN_PASSWORD غیرفعال است.' });
+  }
   if (username !== adminUsername || password !== adminPassword) {
     return response.status(401).json({ message: 'نام کاربری یا رمز عبور مدیر سیستم اشتباه است.' });
   }
@@ -320,7 +403,7 @@ async function listRegistrations(role, response) {
        FROM registration_requests WHERE role = ? ORDER BY created_at DESC`,
       [role]
     );
-    return response.json({ items: rows.map(publicRegistration) });
+    return response.json({ items: rows.map(publicAdminRegistration) });
   } catch (error) {
     console.error(error);
     return response.status(503).json({ message: `فهرست ${roleConfig(role).plural} در دسترس نیست؛ اتصال دیتابیس را بررسی کن.` });
@@ -541,19 +624,19 @@ app.delete('/api/admin/registrations/:role/:id', requireAdmin, async (request, r
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const [rows] = await connection.execute('SELECT account_id FROM registration_requests WHERE id = ? AND role = ? FOR UPDATE', [id, role]);
+    const [rows] = await connection.execute('SELECT account_id, status FROM registration_requests WHERE id = ? AND role = ? FOR UPDATE', [id, role]);
     const registration = rows[0];
     if (!registration) {
       await connection.rollback();
       return response.status(404).json({ message: 'درخواست ثبت‌نام پیدا نشد.' });
     }
     if (registration.account_id) {
-      await connection.execute(`DELETE FROM ${roleConfig(role).table} WHERE id = ?`, [registration.account_id]);
+      await connection.execute(`UPDATE ${roleConfig(role).table} SET status = 'disabled' WHERE id = ?`, [registration.account_id]);
     }
-    await connection.execute('DELETE FROM registration_requests WHERE id = ? AND role = ?', [id, role]);
+    await connection.execute("UPDATE registration_requests SET status = 'disabled' WHERE id = ? AND role = ?", [id, role]);
     await connection.commit();
-    await writeAudit({ eventType: 'RegistrationDeleted', subjectType: role, subjectId: id });
-    return response.json({ message: 'اطلاعات کاربر حذف شد.' });
+    await writeAudit({ eventType: 'RegistrationSoftDeleted', subjectType: role, subjectId: id, payload: { previousStatus: registration.status } });
+    return response.json({ message: 'رکورد به‌صورت غیرمخرب غیرفعال شد.' });
   } catch (error) {
     await connection.rollback();
     console.error(error);
@@ -563,49 +646,118 @@ app.delete('/api/admin/registrations/:role/:id', requireAdmin, async (request, r
   }
 });
 
-function excelCell(value) {
-  return String(value ?? '—')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function excelTable(role, rows) {
-  const driver = role === 'driver';
-  const headers = driver
-    ? ['شناسه', 'نام', 'نام خانوادگی', 'کد ملی', 'شماره تماس', 'استان', 'وضعیت', 'تاریخ ثبت']
-    : ['شناسه', 'نام شرکت', 'شماره ثبت', 'شناسه ملی', 'نام مدیرعامل', 'شماره تماس', 'استان', 'وضعیت', 'تاریخ ثبت'];
-  const body = rows.map((row) => {
-    const values = driver
-      ? [row.id, row.first_name, row.last_name, row.national_id, row.phone, row.province, row.status, row.created_at]
-      : [row.id, row.business_name, row.registration_number, row.national_identifier, row.manager_name, row.phone, row.province, row.status, row.created_at];
-    return `<tr>${values.map((value) => `<td>${excelCell(value)}</td>`).join('')}</tr>`;
-  }).join('');
-  return `\uFEFF<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>body{font-family:Tahoma}table{border-collapse:collapse}th,td{border:1px solid #ccd6e0;padding:8px;white-space:nowrap}th{background:#e8f0fb}</style></head><body><table><thead><tr>${headers.map((header) => `<th>${excelCell(header)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></body></html>`;
-}
-
 app.get('/api/admin/registrations/:role/export', requireAdmin, async (request, response) => {
   const role = registrationRole(request.params.role);
   if (!role) return response.status(400).json({ message: 'نوع کاربر معتبر نیست.' });
+  await writeAudit({ eventType: 'RegistrationExportBlocked', subjectType: role, payload: { reason: 'governed-export-required', admin: request.admin?.sub || null } });
+  return response.status(403).type('application/problem+json').json({
+    type: 'https://gomrok.org/problems/CRM-403',
+    title: 'CRM-403',
+    status: 403,
+    code: 'CRM-403',
+    detail: 'خروجی عمومی غیرفعال است؛ ابتدا درخواست خروجی محدوده‌دار و تأیید شخص دوم ثبت کنید.'
+  });
+});
+
+async function ensurePlatformMembership(account, accountType) {
+  const tenantId = account.tenant_id || 'platform';
+  const isCarrier = accountType === 'carrier';
+  const role = isCarrier ? 'company_y_owner' : 'driver';
+  const organizationId = isCarrier ? `company-y:${account.id}` : `driver:${account.id}`;
+  const organizationType = isCarrier ? 'company_y' : 'driver';
+  const displayName = isCarrier
+    ? String(account.business_name || `Company Y ${account.id}`)
+    : `${account.first_name || ''} ${account.last_name || ''}`.trim() || `Driver ${account.id}`;
+
+  await pool.execute(
+    `INSERT INTO platform_organizations
+      (id, tenant_id, organization_type, display_name, qualification_state)
+     VALUES (?, ?, ?, ?, 'qualified')
+     ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), status = 'active'`,
+    [organizationId, tenantId, organizationType, displayName]
+  );
+  await pool.execute(
+    `INSERT INTO platform_users (tenant_id, external_type, external_id, display_name)
+     VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), status = 'active'`,
+    [tenantId, accountType, account.id, displayName]
+  );
+  const [users] = await pool.execute(
+    `SELECT id FROM platform_users WHERE tenant_id = ? AND external_type = ? AND external_id = ? LIMIT 1`,
+    [tenantId, accountType, account.id]
+  );
+  const userId = users[0]?.id;
+  await pool.execute(
+    `INSERT INTO organization_memberships
+      (tenant_id, organization_id, user_id, role, transaction_role, qualification_state, kyc_level, status)
+     VALUES (?, ?, ?, ?, ?, 'qualified', 'verified', 'active')
+     ON DUPLICATE KEY UPDATE status = 'active', qualification_state = 'qualified', kyc_level = 'verified'`,
+    [tenantId, organizationId, userId, role, isCarrier ? 'carrier' : 'driver']
+  );
+  const [memberships] = await pool.execute(
+    `SELECT id FROM organization_memberships WHERE tenant_id = ? AND organization_id = ? AND user_id = ? AND role = ? LIMIT 1`,
+    [tenantId, organizationId, userId, role]
+  );
+  return { userId, membershipId: memberships[0]?.id, organizationId, externalType: accountType, externalId: account.id };
+}
+
+function hashRefreshToken(token) {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+async function issueRefreshToken(account, membership) {
+  const token = randomBytes(48).toString('base64url');
+  await pool.execute(
+    `INSERT INTO platform_refresh_tokens (tenant_id, user_id, membership_id, token_hash, expires_at)
+     VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 DAY))`,
+    [account.tenant_id, membership.userId, membership.membershipId, hashRefreshToken(token)]
+  );
+  return token;
+}
+
+async function rotateRefreshToken(token) {
+  const tokenHash = hashRefreshToken(token);
+  const [rows] = await pool.execute(
+    `SELECT r.*, m.organization_id, m.role, u.external_type, u.external_id
+       FROM platform_refresh_tokens r
+       JOIN organization_memberships m ON m.id = r.membership_id AND m.tenant_id = r.tenant_id
+       JOIN platform_users u ON u.id = r.user_id AND u.tenant_id = r.tenant_id
+      WHERE r.token_hash = ? AND r.revoked_at IS NULL AND r.expires_at > NOW()
+        AND m.status = 'active' AND u.status = 'active'
+      LIMIT 1`,
+    [tokenHash]
+  );
+  const current = rows[0];
+  if (!current) {
+    const error = new Error('توکن نوسازی نامعتبر یا منقضی است.');
+    error.statusCode = 401;
+    error.code = 'AUTH-401';
+    throw error;
+  }
+  const account = { id: current.external_id, tenant_id: current.tenant_id };
+  const membership = {
+    userId: current.user_id,
+    membershipId: current.membership_id,
+    organizationId: current.organization_id,
+    externalType: current.external_type,
+    externalId: current.external_id
+  };
+  const nextRefreshToken = await issueRefreshToken(account, membership);
+  await pool.execute(`UPDATE platform_refresh_tokens SET revoked_at = NOW(), rotated_to_hash = ? WHERE id = ? AND revoked_at IS NULL`, [hashRefreshToken(nextRefreshToken), current.id]);
+  return { token: issueToken(account, current.role, membership), refreshToken: nextRefreshToken };
+}
+
+app.post('/api/auth/refresh', authRateLimit, async (request, response) => {
+  const refreshToken = String(request.body?.refreshToken || '').trim();
+  if (!refreshToken) return response.status(400).json({ code: 'AUTH-400', message: 'توکن نوسازی لازم است.' });
   try {
-    const [rows] = await pool.execute(
-      `SELECT id, first_name, last_name, national_id, phone, province,
-              business_name, registration_number, national_identifier, manager_name, status, created_at
-       FROM registration_requests WHERE role = ? ORDER BY created_at DESC`,
-      [role]
-    );
-    const fileName = role === 'driver' ? 'gomrok-drivers.xls' : 'gomrok-carriers.xls';
-    response.setHeader('Content-Type', 'application/vnd.ms-excel; charset=utf-8');
-    response.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    return response.send(excelTable(role, rows));
+    return response.json(await rotateRefreshToken(refreshToken));
   } catch (error) {
-    console.error(error);
-    return response.status(503).json({ message: 'خروجی اکسل آماده نشد.' });
+    return response.status(error.statusCode || 500).json({ code: error.code || 'AUTH-500', message: error.message || 'نوسازی نشست انجام نشد.' });
   }
 });
 
-app.post('/api/auth/login', async (request, response) => {
+app.post('/api/auth/login', authRateLimit, async (request, response) => {
   const phone = normalizeDigits(request.body?.phone).replace(/\s/g, '');
   const password = String(request.body?.password || '');
   if (!/^09\d{9}$/.test(phone) || !password) return response.status(400).json({ message: 'شماره تماس و رمز عبور را وارد کن.' });
@@ -616,15 +768,17 @@ app.post('/api/auth/login', async (request, response) => {
     if (!driver || driver.status !== 'active' || !driver.password_hash || !(await bcrypt.compare(password, driver.password_hash))) {
       return response.status(401).json({ message: 'حساب راننده فعال نیست یا اطلاعات ورود اشتباه است.' });
     }
-    await writeAudit({ actorId: driver.id, eventType: 'DriverLoggedIn', subjectId: driver.id, payload: { source: 'mobile-web' } });
-    return response.json({ token: issueToken(driver, 'driver'), user: publicDriver(driver) });
+    const membership = await ensurePlatformMembership(driver, 'driver');
+    const refreshToken = await issueRefreshToken(driver, membership);
+    await writeAudit({ actorId: driver.id, eventType: 'DriverLoggedIn', subjectId: driver.id, payload: { source: 'mobile-web', organizationId: membership.organizationId } });
+    return response.json({ token: issueToken(driver, 'driver', membership), refreshToken, user: publicDriver(driver) });
   } catch (error) {
     console.error(error);
     return response.status(500).json({ message: 'ورود انجام نشد؛ اتصال دیتابیس را بررسی کن.' });
   }
 });
 
-app.post('/api/auth/login-carrier', async (request, response) => {
+app.post('/api/auth/login-carrier', authRateLimit, async (request, response) => {
   const phone = normalizeDigits(request.body?.phone).replace(/\s/g, '');
   const password = String(request.body?.password || '');
   if (!/^09\d{9}$/.test(phone) || !password) return response.status(400).json({ message: 'شماره تماس و رمز عبور را وارد کن.' });
@@ -635,13 +789,45 @@ app.post('/api/auth/login-carrier', async (request, response) => {
     if (!carrier || carrier.status !== 'active' || !carrier.password_hash || !(await bcrypt.compare(password, carrier.password_hash))) {
       return response.status(401).json({ message: 'حساب کرییر فعال نیست یا اطلاعات ورود اشتباه است.' });
     }
-    await writeAudit({ actorId: carrier.id, eventType: 'CarrierLoggedIn', subjectType: 'carrier', subjectId: carrier.id, payload: { source: 'mobile-web' } });
-    return response.json({ token: issueToken(carrier, 'carrier'), user: publicCarrier(carrier) });
+    const membership = await ensurePlatformMembership(carrier, 'carrier');
+    const refreshToken = await issueRefreshToken(carrier, membership);
+    await writeAudit({ actorId: carrier.id, eventType: 'CarrierLoggedIn', subjectType: 'carrier', subjectId: carrier.id, payload: { source: 'mobile-web', organizationId: membership.organizationId } });
+    return response.json({ token: issueToken(carrier, 'company_y_owner', membership), refreshToken, user: publicCarrier(carrier) });
   } catch (error) {
     console.error(error);
     return response.status(500).json({ message: 'ورود کرییر انجام نشد؛ اتصال دیتابیس را بررسی کن.' });
   }
 });
+
+app.post('/api/auth/change-password', platformAuth({ roles: [ROLES.DRIVER, ROLES.COMPANY_Y_OWNER], permission: PERMISSIONS.UPDATE }), async (request, response) => {
+  if (!idempotencyKey(request)) return response.status(428).json({ code: 'AUTH-428', message: 'برای تغییر رمز عبور X-Idempotency-Key لازم است.' });
+  const currentPassword = String(request.body?.currentPassword || '');
+  const newPassword = String(request.body?.newPassword || '');
+  if (newPassword.length < 12 || newPassword.length > 256) {
+    return response.status(400).json({ code: 'AUTH-422', message: 'رمز عبور جدید باید بین ۱۲ تا ۲۵۶ نویسه باشد.' });
+  }
+  const accountType = request.actor.externalType === 'carrier' ? 'carrier' : request.actor.externalType === 'driver' ? 'driver' : null;
+  const table = accountType === 'carrier' ? 'carriers' : accountType === 'driver' ? 'drivers' : null;
+  if (!table || !request.actor.externalId) return response.status(403).json({ code: 'AUTH-403', message: 'حساب این نشست امکان تغییر رمز ندارد.' });
+  try {
+    const [rows] = await pool.execute(`SELECT id, password_hash FROM ${table} WHERE id = ? AND tenant_id = ? AND status = 'active' LIMIT 1`, [request.actor.externalId, request.actor.tenantId]);
+    const account = rows[0];
+    if (!account || !account.password_hash || !(await bcrypt.compare(currentPassword, account.password_hash))) {
+      return response.status(401).json({ code: 'AUTH-401', message: 'رمز عبور فعلی معتبر نیست.' });
+    }
+    if (await bcrypt.compare(newPassword, account.password_hash)) return response.status(400).json({ code: 'AUTH-423', message: 'رمز عبور جدید باید با رمز قبلی متفاوت باشد.' });
+    await pool.execute(`UPDATE ${table} SET password_hash = ? WHERE id = ? AND tenant_id = ?`, [await bcrypt.hash(newPassword, 12), account.id, request.actor.tenantId]);
+    await pool.execute(`UPDATE platform_refresh_tokens SET revoked_at = NOW() WHERE tenant_id = ? AND user_id = ? AND revoked_at IS NULL`, [request.actor.tenantId, request.actor.userId]);
+    await writeAudit({ actorId: request.actor.userId, eventType: 'PasswordChanged', subjectType: accountType, subjectId: account.id, payload: { source: 'platform-account-security' } });
+    return response.json({ message: 'رمز عبور تغییر کرد؛ برای دریافت نشست جدید دوباره وارد شوید.' });
+  } catch (error) {
+    console.error(error);
+    return response.status(503).json({ code: 'AUTH-503', message: 'تغییر رمز عبور موقتاً در دسترس نیست.' });
+  }
+});
+
+app.use('/api/platform', platformRouter);
+app.use('/api/platform/admin', adminRouter);
 
 app.listen(port, '127.0.0.1', () => {
   console.log(`Gomrok API: http://127.0.0.1:${port}`);
