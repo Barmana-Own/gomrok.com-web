@@ -1,5 +1,7 @@
 # Bounded security audit
 
+> [Persian version](SECURITY-AUDIT.fa.md) | [Persian README](../README.fa.md)
+
 Date: 2026-08-18  
 Scope: authentication/IAM, tenant and organization boundaries, BOLA/BOPLA indicators, secrets, legacy routes, document/contact/financial masking, and realtime-relevant security paths.  
 Change boundary: only `server/src/security/platform-auth.js` and this report were changed.

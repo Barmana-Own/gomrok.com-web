@@ -1,5 +1,7 @@
 # GomrokDotCom developer handoff
 
+> [Persian version](NEXT-DEVELOPER.fa.md) | [Persian README](../README.fa.md)
+
 This repository contains one shared logistics kernel and six role-scoped surfaces: Shipper, Company X, Company Y, Driver mobile web, Agent/Z destination and Admin/Marketplace Governance. The source precedence and domain invariants are documented in the product contract files supplied with the project; `shared/contract.js` is the executable enum/permission layer and `openapi/gomrok-platform-v1.yaml` is the API skeleton.
 
 ## Start-up

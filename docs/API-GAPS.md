@@ -1,5 +1,7 @@
 # API-GAP register
 
+> [نسخهٔ فارسی](API-GAPS.fa.md) | [Persian README](../README.fa.md)
+
 The shared platform routes are implemented under `/api/platform`. These items remain explicitly outside the current foundation and must be closed before production UI freeze:
 
 - `API-GAP-CRM-READ-MODEL`: full CRM L1/L2 account, consent and campaign read/write contracts.
