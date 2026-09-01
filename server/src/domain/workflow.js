@@ -76,7 +76,7 @@ export function assertHumanAward({ actor, level, winnerOrganizationType, isAiAct
   }
   if (level === RFQ_LEVELS.MARKET_A && role === 'shipper_logistics_user') assertDelegated(actor, 'award');
   if (level === RFQ_LEVELS.MARKET_B && winnerOrganizationType !== 'company_y') {
-    throw new DomainError(ERROR_CODES.FORBIDDEN_DIRECT_DRIVER_AWARD, 'در بازار B فقط شرکت کرییر می‌تواند برنده ظرفیت باشد؛ اعطای مستقیم به راننده ممنوع است.', 403);
+    throw new DomainError(ERROR_CODES.FORBIDDEN_DIRECT_DRIVER_AWARD, 'در بازار B فقط شرکت حمل‌ونقل می‌تواند برنده ظرفیت باشد؛ اعطای مستقیم به راننده ممنوع است.', 403);
   }
   if (level === RFQ_LEVELS.MARKET_A && winnerOrganizationType !== 'company_x') {
     throw new DomainError('AWD-403', 'برنده RFQ1 باید شرکت حمل واجد شرایط باشد.', 403);

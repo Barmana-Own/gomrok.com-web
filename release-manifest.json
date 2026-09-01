@@ -1,0 +1,64 @@
+{
+  "project": "GOMROK",
+  "releaseId": "route-pulse-ui-redesign-2026-09-01",
+  "repositoryRevisionBaseline": "dd06d23",
+  "finalStageStatus": "PASS",
+  "workflowStatus": "COMPLETE",
+  "source": {
+    "frontend": "client/",
+    "backend": "server/",
+    "sharedContract": "shared/contract.js",
+    "openApi": "openapi/gomrok-platform-v1.yaml",
+    "designTokens": "design/tokens.json"
+  },
+  "runtime": {
+    "node": ">=18",
+    "frontend": "React 18 / Vite 6",
+    "backend": "Express 4",
+    "database": "MySQL 8.4"
+  },
+  "commands": {
+    "install": "npm install",
+    "development": "npm run dev",
+    "previewHub": "http://127.0.0.1:5083/app/preview",
+    "build": "npm run build",
+    "test": "npm test",
+    "audit": "npm audit",
+    "migration": "npm --workspace server run db:migrate",
+    "productionStart": "npm start"
+  },
+  "validation": {
+    "frontendBuild": "PASS",
+    "backendTests": "PASS: 19/19",
+    "dependencyAudit": "PASS: 0 known vulnerabilities",
+    "publicRoleEntryFlow": "PASS: driver/carrier role cards route to role-specific login, then matching registration CTA",
+    "registrationFieldPresentation": "PASS: registration placeholders removed and click focus remains a single clean field outline on driver and carrier forms",
+    "welcomeBrandAlignment": "PASS: welcome status pill remains on the left and GOMROK logo block on the right in RTL, including 390px mobile layout",
+    "carrierTerminology": "PASS: user-facing Persian carrier labels use شرکت حمل‌ونقل across login, registration, account, admin and API feedback surfaces",
+    "responsiveBrowserQa": "PASS: 360, 390, 430, 768, 1024, 1280, 1440; true RTL public onboarding, six accessible hamburger drawers and desktop sidebars",
+    "browserConsole": "PASS: no errors or warnings",
+    "dockerComposeConfig": "PASS",
+    "productionBaseAssetSmoke": "PASS: /app/ hashed JavaScript served as text/javascript",
+    "liveDatabaseMigration": "NOT_RUN: schema unchanged and no disposable database credentials supplied",
+    "externalDeployment": "NOT_PERFORMED"
+  },
+  "knownNonBlockingIssues": [
+    "Live database-backed mutation flows require test accounts and a populated disposable MySQL environment.",
+    "The existing process-local realtime broker requires shared pub/sub before horizontal API scaling."
+  ],
+  "artifacts": [
+    "backups/gomrok-current-ui-before-full-redesign-2026-08-31.zip",
+    "client/src/route-pulse.css",
+    "client/src/components/ProductIcon.jsx",
+    "client/src/components/ResponsivePanelNav.jsx",
+    "client/public/images/gomrok-mark.svg",
+    "client/public/images/gomrok-driver-onboarding.jpg",
+    "client/public/images/gomrok-carrier-onboarding.jpg",
+    "docs/12-final-review.md",
+    "reports/customer-report.fa.md",
+    "reports/customer-report.en.md",
+    "reports/technical-report.fa.md",
+    "reports/technical-report.en.md"
+  ],
+  "date": "2026-09-01"
+}

@@ -6,13 +6,13 @@
   "start_url": "/app/driver",
   "scope": "/app/",
   "display": "standalone",
-  "background_color": "#f7fbff",
-  "theme_color": "#0c3045",
+  "background_color": "#ededff",
+  "theme_color": "#140e04",
   "description": "اپ موبایل راننده برای سفر، GPS، اسناد و POD",
   "icons": [
     {
-      "src": "/app/images/gomrok-driver-truck.webp",
-      "type": "image/webp",
+      "src": "/app/images/gomrok-mark.svg",
+      "type": "image/svg+xml",
       "sizes": "any",
       "purpose": "any maskable"
     }

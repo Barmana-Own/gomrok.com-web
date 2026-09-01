@@ -1,4 +1,55 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Icon } from './ProductIcon.jsx';
+
+function useAccessibleLayer(open, onClose) {
+  const layerRef = useRef(null);
+  const previousFocusRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    previousFocusRef.current = document.activeElement;
+    const layer = layerRef.current;
+    const focusableSelector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+    const focusable = () => [...(layer?.querySelectorAll(focusableSelector) || [])];
+    (focusable()[0] || layer)?.focus?.();
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCloseRef.current?.();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const items = focusable();
+      if (!items.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previousFocusRef.current?.isConnected) previousFocusRef.current.focus?.();
+    };
+  }, [open]);
+
+  return layerRef;
+}
 
 export function StatusTimeline({ items = [] }) {
   return (
@@ -16,7 +67,7 @@ export function StatusTimeline({ items = [] }) {
 export function DocCard({ document, onOpen }) {
   return (
     <article className="platform-doc-card">
-      <div className="platform-doc-card__icon">▤</div>
+      <div className="platform-doc-card__icon"><Icon name="document" size={22} /></div>
       <div className="platform-doc-card__copy">
         <strong>{document?.docType || 'سند'}</strong>
         <small>نسخه {document?.versionNo || '—'} · {document?.state === 'APPROVED' ? 'قفل‌شده' : 'در حال بررسی'} · حساسیت {document?.sensitivity || 'P1'}</small>
@@ -39,13 +90,14 @@ export function MoneyBreakdown({ items = [], currency = 'EUR' }) {
 }
 
 export function ApprovalDialog({ open, title = 'تأیید عملیات', description, onCancel, onConfirm, busy = false, children }) {
+  const dialogRef = useAccessibleLayer(open, onCancel);
   if (!open) return null;
   return (
     <div className="platform-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel?.(); }}>
-      <section className="platform-dialog" role="dialog" aria-modal="true" aria-labelledby="platform-dialog-title">
+      <section className="platform-dialog" role="dialog" aria-modal="true" aria-labelledby="platform-dialog-title" aria-describedby="platform-dialog-description" ref={dialogRef} tabIndex="-1">
         <span className="platform-eyebrow">عملیات کنترل‌شده</span>
         <h2 id="platform-dialog-title">{title}</h2>
-        <p>{description || 'این تغییر پس از ثبت در تاریخچه قابل پیگیری است.'}</p>
+        <p id="platform-dialog-description">{description || 'این تغییر پس از ثبت در تاریخچه قابل پیگیری است.'}</p>
         {children}
         <div className="platform-dialog__actions"><button type="button" onClick={onCancel} disabled={busy}>انصراف</button><button className="platform-button platform-button--primary" type="button" onClick={onConfirm} disabled={busy}>{busy ? 'در حال ثبت…' : 'تأیید و ثبت'}</button></div>
       </section>
@@ -68,11 +120,12 @@ export function RiskBadge({ flags = [] }) {
 }
 
 export function AuditDrawer({ open, items = [], onClose }) {
+  const drawerRef = useAccessibleLayer(open, onClose);
   if (!open) return null;
   return (
     <div className="platform-drawer-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.(); }}>
-      <aside className="platform-audit-drawer" aria-label="تاریخچه حسابرسی">
-        <div className="platform-audit-drawer__header"><div><span className="platform-eyebrow">append-only</span><h2>تاریخچه رویدادها</h2></div><button type="button" onClick={onClose} aria-label="بستن">×</button></div>
+      <aside className="platform-audit-drawer" role="dialog" aria-modal="true" aria-label="تاریخچه حسابرسی" ref={drawerRef} tabIndex="-1">
+        <div className="platform-audit-drawer__header"><div><span className="platform-eyebrow">تاریخچه تغییرناپذیر</span><h2>تاریخچه رویدادها</h2></div><button type="button" onClick={onClose} aria-label="بستن"><Icon name="close" size={20} /></button></div>
         <StatusTimeline items={items.map((item) => ({ label: item.event_type || item.eventName, detail: item.created_at || item.occurredAt }))} />
       </aside>
     </div>
@@ -89,13 +142,14 @@ export function ContactMasked({ contact, onReveal, revealed = false, expiresAt }
 }
 
 export function ContactRevealDialog({ open, onCancel, onConfirm, reason, setReason, busy = false }) {
+  const dialogRef = useAccessibleLayer(open, onCancel);
   if (!open) return null;
   return (
-    <div className="platform-dialog-backdrop" role="presentation">
-      <section className="platform-dialog" role="dialog" aria-modal="true" aria-labelledby="reveal-dialog-title">
+    <div className="platform-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel?.(); }}>
+      <section className="platform-dialog" role="dialog" aria-modal="true" aria-labelledby="reveal-dialog-title" aria-describedby="reveal-dialog-description" ref={dialogRef} tabIndex="-1">
         <span className="platform-eyebrow">RV$ · زمان‌دار</span>
         <h2 id="reveal-dialog-title">نمایش موقت تماس</h2>
-        <p>دلیل عملیاتی را ثبت کن. مجوز حداکثر ۱۵ دقیقه معتبر است و در حسابرسی می‌ماند.</p>
+        <p id="reveal-dialog-description">دلیل عملیاتی را ثبت کن. مجوز حداکثر ۱۵ دقیقه معتبر است و در حسابرسی می‌ماند.</p>
         <textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="دلیل نیاز به تماس کامل" rows="3" />
         <div className="platform-dialog__actions"><button type="button" onClick={onCancel} disabled={busy}>انصراف</button><button className="platform-button platform-button--primary" type="button" onClick={onConfirm} disabled={busy}>{busy ? 'در حال ثبت…' : 'ثبت دلیل و درخواست'}</button></div>
       </section>

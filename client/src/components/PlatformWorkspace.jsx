@@ -10,6 +10,7 @@ import {
   RiskBadge,
   StatusTimeline
 } from './PlatformPrimitives.jsx';
+import { ProductLogo } from './ProductIcon.jsx';
 const ShipperPanel = lazy(() => import('./ShipperPanel.jsx'));
 const CompanyXPanel = lazy(() => import('./CompanyXPanel.jsx'));
 const CompanyYPanel = lazy(() => import('./CompanyYPanel.jsx'));
@@ -181,7 +182,7 @@ export default function PlatformWorkspace({ user, token, apiUrl, onLogout }) {
   return (
     <div className="platform-shell" dir="rtl">
       <header className="platform-header">
-        <div className="platform-brand"><span className="platform-brand__mark">✓</span><span><strong>GOMROK</strong><small>Shared Logistics Control Tower</small></span></div>
+        <div className="platform-brand"><ProductLogo subtitle="فضای عملیات لجستیک" /></div>
         <div className="platform-header__user"><span>{label}</span><button type="button" onClick={onLogout}>خروج</button></div>
       </header>
       <main className="platform-main">

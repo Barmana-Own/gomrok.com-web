@@ -9,6 +9,8 @@ import {
   RiskBadge,
   StatusTimeline
 } from './PlatformPrimitives.jsx';
+import { NavigationIcon, ProductLogo } from './ProductIcon.jsx';
+import { PanelMenuButton, PanelSidebar, usePanelNavigation } from './ResponsivePanelNav.jsx';
 
 const stateLabels = {
   DRAFT: 'پیش‌نویس',
@@ -109,8 +111,8 @@ function Notice({ notice }) {
   return <div className="platform-notice"><strong>{notice.code ? `${notice.code} · ` : ''}</strong>{notice.message}</div>;
 }
 
-function XHeader({ role, onLogout }) {
-  return <header className="platform-header"><div className="platform-brand"><span className="platform-brand__mark">✓</span><span><strong>GOMROK</strong><small>COMPANY X · OPERATIONS CONTROL TOWER</small></span></div><div className="platform-header__user"><span>{roleLabels[role] || 'پنل شرکت X'}</span><button type="button" onClick={onLogout}>خروج</button></div></header>;
+function XHeader({ role, onLogout, menuOpen, onMenuToggle, menuId }) {
+  return <header className="platform-header"><div className="platform-header__primary"><PanelMenuButton open={menuOpen} onClick={onMenuToggle} controls={menuId} inverse /><div className="platform-brand"><ProductLogo subtitle="کنترل‌تاور عملیات شرکت X" /></div></div><div className="platform-header__user"><span>{roleLabels[role] || 'پنل شرکت X'}</span><button type="button" onClick={onLogout}>خروج</button></div></header>;
 }
 
 function caseTimeline(item) {
@@ -134,6 +136,7 @@ function Card({ title, eyebrow, children, actions }) {
 
 export default function CompanyXPanel({ user, token, apiUrl, onLogout }) {
   const role = user?.role || 'company_x_operations_manager';
+  const { menuId, menuOpen, closeMenu, toggleMenu } = usePanelNavigation('company-x-menu');
   const canPrice = [ 'company_x_owner', 'company_x_pricing_expert' ].includes(role);
   const canAward = [ 'company_x_owner', 'company_x_operations_manager' ].includes(role);
   const canContract = canAward;
@@ -634,5 +637,27 @@ export default function CompanyXPanel({ user, token, apiUrl, onLogout }) {
   if (section === 'organization') content = renderSimple('سازمان و سطح دسترسی', `نقش جاری: ${roleLabels[role] || role} · Delegation و route/country/cargo scope از سرور خوانده می‌شود.`, { label: 'باز کردن context', onClick: () => setNotice({ message: JSON.stringify(context?.delegation || {}) }) });
   if (section === 'notifications') content = renderSimple('اعلان‌ها', 'Notification از Domain Event ساخته شده و فقط برای سازمان جاری نمایش داده می‌شود.');
 
-  return <div className="company-x-shell" dir="rtl"><XHeader role={role} onLogout={onLogout} /><div className="company-x-layout"><aside className="company-x-sidebar"><div className="company-x-sidebar__intro"><span className="platform-eyebrow">{roleLabels[role] || role}</span><strong>پنل شرکت X</strong><small>Market A ↔ Market B ↔ Control Tower</small></div><nav>{menu.map(([key, label]) => <button type="button" key={key} className={section === key ? 'is-active' : ''} onClick={() => setSection(key)}>{label}</button>)}</nav><div className="company-x-sidebar__guard">RFQ1 و RFQ2 جدا هستند. Award مستقیم X → Driver، نرخ Y-Driver و مخزن کامل Driverها در این پنل وجود ندارد.</div></aside><main className="company-x-content"><section className="platform-hero"><div><span className="platform-eyebrow">Server is source of truth · {roleLabels[role] || role}</span><h1>{menu.find(([key]) => key === section)?.[1] || 'داشبورد عملیات'}</h1><p>هر اقدام از RBAC، ABAC، qualification، readiness gate و Audit سرور عبور می‌کند.</p></div><div className="platform-hero__status"><i /> tenant-scoped<br /><small>Market A / Market B wall فعال</small></div></section><div className="company-x-mobile-nav">{menu.slice(0, 7).map(([key, label]) => <button type="button" key={key} className={section === key ? 'is-active' : ''} onClick={() => setSection(key)}>{label}</button>)}</div><Notice notice={notice} />{busy && <div className="platform-loading">در حال دریافت یا ثبت read model…</div>}{!busy && content}</main></div><ApprovalDialog open={awardOpen} title="Award انسانی" description="AI فقط رتبه‌بندی/توضیح است. شرکت برنده و دلیل انسانی باید صریحاً ثبت شود؛ Award مستقیم به Driver مجاز نیست." busy={busy} onCancel={() => setAwardOpen(false)} onConfirm={award}><div className="company-x-dialog-fields"><label>برنده<select value={awardWinner} onChange={(event) => setAwardWinner(event.target.value)}>{selectedRfqQuotes.map((item) => <option key={item.bidderOrgId} value={item.bidderOrgId}>{item.companyName || item.bidderOrgId}</option>)}</select></label><label>دلیل اجباری<textarea value={awardReason} onChange={(event) => setAwardReason(event.target.value)} rows="3" /></label></div></ApprovalDialog><AuditDrawer open={auditOpen} items={auditItems} onClose={() => setAuditOpen(false)} /></div>;
+  const selectMenuSection = (key) => {
+    closeMenu();
+    setSection(key);
+  };
+
+  return <div className="company-x-shell" dir="rtl">
+    <XHeader role={role} onLogout={onLogout} menuOpen={menuOpen} onMenuToggle={toggleMenu} menuId={menuId} />
+    <div className="company-x-layout">
+      <PanelSidebar open={menuOpen} onClose={closeMenu} id={menuId} className="company-x-sidebar" title="منوی عملیات شرکت X" subtitle={roleLabels[role] || role}>
+        <div className="company-x-sidebar__intro"><span className="platform-eyebrow">{roleLabels[role] || role}</span><strong>پنل شرکت X</strong><small>Market A ↔ Market B ↔ Control Tower</small></div>
+        <nav>{menu.map(([key, label]) => <button type="button" key={key} className={section === key ? 'is-active' : ''} aria-current={section === key ? 'page' : undefined} onClick={() => selectMenuSection(key)}><NavigationIcon section={key} /><span>{label}</span></button>)}</nav>
+        <div className="company-x-sidebar__guard">RFQ1 و RFQ2 جدا هستند. انتخاب مستقیم راننده و نرخ رابطه Y–Driver در این پنل نمایش داده نمی‌شود.</div>
+      </PanelSidebar>
+      <main className="company-x-content">
+        <section className="platform-hero"><div><span className="platform-eyebrow">منبع حقیقت: سرور · {roleLabels[role] || role}</span><h1>{menu.find(([key]) => key === section)?.[1] || 'داشبورد عملیات'}</h1><p>هر اقدام از نقش، دامنه دسترسی، صلاحیت، آمادگی پرونده و حسابرسی عبور می‌کند.</p></div><div className="platform-hero__status"><i /> دسترسی سازمانی<br /><small>مرز Market A / Market B فعال</small></div></section>
+        <Notice notice={notice} />
+        {busy && <div className="platform-loading">در حال دریافت یا ثبت اطلاعات…</div>}
+        {!busy && content}
+      </main>
+    </div>
+    <ApprovalDialog open={awardOpen} title="Award انسانی" description="AI فقط رتبه‌بندی/توضیح است. شرکت برنده و دلیل انسانی باید صریحاً ثبت شود؛ Award مستقیم به Driver مجاز نیست." busy={busy} onCancel={() => setAwardOpen(false)} onConfirm={award}><div className="company-x-dialog-fields"><label>برنده<select value={awardWinner} onChange={(event) => setAwardWinner(event.target.value)}>{selectedRfqQuotes.map((item) => <option key={item.bidderOrgId} value={item.bidderOrgId}>{item.companyName || item.bidderOrgId}</option>)}</select></label><label>دلیل اجباری<textarea value={awardReason} onChange={(event) => setAwardReason(event.target.value)} rows="3" /></label></div></ApprovalDialog>
+    <AuditDrawer open={auditOpen} items={auditItems} onClose={() => setAuditOpen(false)} />
+  </div>;
 }

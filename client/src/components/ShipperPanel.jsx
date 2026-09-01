@@ -9,6 +9,8 @@ import {
   RiskBadge,
   StatusTimeline
 } from './PlatformPrimitives.jsx';
+import { NavigationIcon, ProductLogo } from './ProductIcon.jsx';
+import { PanelMenuButton, PanelSidebar, usePanelNavigation } from './ResponsivePanelNav.jsx';
 
 const stateLabels = {
   DRAFT: 'پیش‌نویس',
@@ -131,8 +133,8 @@ function Notice({ notice }) {
   return <div className="platform-notice"><strong>{notice.code ? `${notice.code} · ` : ''}</strong>{notice.message}</div>;
 }
 
-function ShipperHeader({ role, onLogout }) {
-  return <header className="platform-header"><div className="platform-brand"><span className="platform-brand__mark">✓</span><span><strong>GOMROK</strong><small>SHIPPER / CUSTOMER CONTROL TOWER</small></span></div><div className="platform-header__user"><span>{roles[role] || 'پنل مشتری'}</span><button type="button" onClick={onLogout}>خروج</button></div></header>;
+function ShipperHeader({ role, onLogout, menuOpen, onMenuToggle, menuId }) {
+  return <header className="platform-header"><div className="platform-header__primary"><PanelMenuButton open={menuOpen} onClick={onMenuToggle} controls={menuId} inverse /><div className="platform-brand"><ProductLogo subtitle="کنترل‌تاور صاحب بار" /></div></div><div className="platform-header__user"><span>{roles[role] || 'پنل مشتری'}</span><button type="button" onClick={onLogout}>خروج</button></div></header>;
 }
 
 function Wizard({ draft, setDraft, step, setStep, draftCase, review, busy, onSave, onPublish, canPublish }) {
@@ -157,6 +159,7 @@ function Wizard({ draft, setDraft, step, setStep, draftCase, review, busy, onSav
 
 export default function ShipperPanel({ user, token, apiUrl, onLogout }) {
   const role = user?.role || 'consignee';
+  const { menuId, menuOpen, closeMenu, toggleMenu } = usePanelNavigation('shipper-menu');
   const canEdit = [ 'shipper_admin', 'shipper_logistics_user' ].includes(role);
   const canFinance = [ 'shipper_admin', 'shipper_finance_user' ].includes(role);
   const [dashboard, setDashboard] = useState(null);
@@ -501,5 +504,31 @@ export default function ShipperPanel({ user, token, apiUrl, onLogout }) {
   if (section === 'security') content = renderSimple('پروفایل و امنیت', 'نشست کوتاه‌عمر، refresh چرخشی، step-up برای عملیات پرریسک و ثبت Audit فعال است.');
   if (section === 'support') content = renderSimple('پشتیبانی', 'برای هر درخواست پشتیبانی، شماره پرونده و Correlation ID را همراه داشته باشید.');
 
-  return <div className="shipper-shell" dir="rtl"><ShipperHeader role={role} onLogout={onLogout} /><div className="shipper-layout"><aside className="shipper-sidebar"><div className="shipper-sidebar__intro"><span className="platform-eyebrow">{currentRoleLabel}</span><strong>پنل صاحب بار</strong><small>Market A + Control Tower</small></div><nav>{menu.map(([key, label]) => <button key={key} type="button" className={section === key ? 'is-active' : ''} onClick={() => { if (key === 'new-request') startNewRequest(); else if (key === 'tracking') loadTracking(); else if (key === 'pod') loadPod(); else setSection(key); }}>{label}</button>)}</nav><div className="shipper-sidebar__guard">RFQ2، نرخ X-Y، نرخ Y-Driver و GPS خام در این سطح intentionally hidden.</div></aside><main className="shipper-content"><section className="platform-hero"><div><span className="platform-eyebrow">Server is source of truth · {currentRoleLabel}</span><h1>{section === 'dashboard' ? 'مرکز عملیات صاحب بار' : menu.find(([key]) => key === section)?.[1] || 'پنل مشتری'}</h1><p>تمام اقدام‌ها از عضویت، Permission، ABAC، وضعیت پرونده و Audit عبور می‌کنند.</p></div><div className="platform-hero__status"><i /> tenant-scoped<br /><small>Customer-X finance isolated · RFQ1 sealed</small></div></section><div className="shipper-mobile-nav">{menu.slice(0, 6).map(([key, label]) => <button key={key} type="button" className={section === key ? 'is-active' : ''} onClick={() => key === 'new-request' ? startNewRequest() : setSection(key)}>{label}</button>)}</div><Notice notice={notice} />{busy && <div className="platform-loading">در حال دریافت یا ثبت read model…</div>}{!busy && content}</main></div><ApprovalDialog open={awardOpen} title="Award انسانی شرکت X" description="دلیل انتخاب اجباری است؛ AI فقط رتبه‌بندی و توضیح می‌دهد و نمی‌تواند برنده را ثبت کند." busy={busy} onCancel={() => setAwardOpen(false)} onConfirm={award}><div className="shipper-dialog-fields"><label>برنده شرکت X<select value={selectedWinner} onChange={(event) => setSelectedWinner(event.target.value)}>{quotes?.quotes?.map((quote) => <option key={quote.bidderOrgId} value={quote.bidderOrgId}>{quote.bidderOrgId}</option>)}</select></label><label>دلیل اجباری Award<textarea value={awardReason} onChange={(event) => setAwardReason(event.target.value)} rows="3" /></label></div></ApprovalDialog><ApprovalDialog open={rejectOpen} title="رد Draft CMR" description="نسخه تأییدشده قابل رد نیست. دلیل اصلاح را قبل از ثبت وارد کن." busy={busy} onCancel={() => setRejectOpen(false)} onConfirm={rejectCmr}><div className="shipper-dialog-fields"><label>دلیل رد و اصلاح<textarea value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} rows="3" /></label></div></ApprovalDialog><AuditDrawer open={auditOpen} items={auditItems} onClose={() => setAuditOpen(false)} /></div>;
+  const selectMenuSection = (key) => {
+    closeMenu();
+    if (key === 'new-request') startNewRequest();
+    else if (key === 'tracking') loadTracking();
+    else if (key === 'pod') loadPod();
+    else setSection(key);
+  };
+
+  return <div className="shipper-shell" dir="rtl">
+    <ShipperHeader role={role} onLogout={onLogout} menuOpen={menuOpen} onMenuToggle={toggleMenu} menuId={menuId} />
+    <div className="shipper-layout">
+      <PanelSidebar open={menuOpen} onClose={closeMenu} id={menuId} className="shipper-sidebar" title="منوی پنل صاحب بار" subtitle={currentRoleLabel}>
+        <div className="shipper-sidebar__intro"><span className="platform-eyebrow">{currentRoleLabel}</span><strong>پنل صاحب بار</strong><small>Market A + Control Tower</small></div>
+        <nav>{menu.map(([key, label]) => <button key={key} type="button" className={section === key ? 'is-active' : ''} aria-current={section === key ? 'page' : undefined} onClick={() => selectMenuSection(key)}><NavigationIcon section={key} /><span>{label}</span></button>)}</nav>
+        <div className="shipper-sidebar__guard">RFQ2، نرخ X-Y، نرخ Y-Driver و GPS خام در این سطح عمداً پنهان است.</div>
+      </PanelSidebar>
+      <main className="shipper-content">
+        <section className="platform-hero"><div><span className="platform-eyebrow">منبع حقیقت: سرور · {currentRoleLabel}</span><h1>{section === 'dashboard' ? 'مرکز عملیات صاحب بار' : menu.find(([key]) => key === section)?.[1] || 'پنل مشتری'}</h1><p>تمام اقدام‌ها از عضویت، سطح دسترسی، وضعیت پرونده و حسابرسی عبور می‌کنند.</p></div><div className="platform-hero__status"><i /> دسترسی سازمانی<br /><small>اطلاعات مالی و RFQ تفکیک‌شده</small></div></section>
+        <Notice notice={notice} />
+        {busy && <div className="platform-loading">در حال دریافت یا ثبت اطلاعات…</div>}
+        {!busy && content}
+      </main>
+    </div>
+    <ApprovalDialog open={awardOpen} title="Award انسانی شرکت X" description="دلیل انتخاب اجباری است؛ AI فقط رتبه‌بندی و توضیح می‌دهد و نمی‌تواند برنده را ثبت کند." busy={busy} onCancel={() => setAwardOpen(false)} onConfirm={award}><div className="shipper-dialog-fields"><label>برنده شرکت X<select value={selectedWinner} onChange={(event) => setSelectedWinner(event.target.value)}>{quotes?.quotes?.map((quote) => <option key={quote.bidderOrgId} value={quote.bidderOrgId}>{quote.bidderOrgId}</option>)}</select></label><label>دلیل اجباری Award<textarea value={awardReason} onChange={(event) => setAwardReason(event.target.value)} rows="3" /></label></div></ApprovalDialog>
+    <ApprovalDialog open={rejectOpen} title="رد Draft CMR" description="نسخه تأییدشده قابل رد نیست. دلیل اصلاح را قبل از ثبت وارد کن." busy={busy} onCancel={() => setRejectOpen(false)} onConfirm={rejectCmr}><div className="shipper-dialog-fields"><label>دلیل رد و اصلاح<textarea value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} rows="3" /></label></div></ApprovalDialog>
+    <AuditDrawer open={auditOpen} items={auditItems} onClose={() => setAuditOpen(false)} />
+  </div>;
 }

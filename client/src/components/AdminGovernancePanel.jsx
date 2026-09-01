@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePlatformRealtime } from '../hooks/usePlatformRealtime.js';
 import { RiskBadge } from './PlatformPrimitives.jsx';
+import { NavigationIcon, ProductLogo } from './ProductIcon.jsx';
+import { PanelMenuButton, PanelSidebar, usePanelNavigation } from './ResponsivePanelNav.jsx';
 
 const roleLabels = {
   super_admin: 'Super Admin',
@@ -71,10 +73,11 @@ function randomKey(prefix = 'admin') {
 }
 
 function requestJson(apiUrl, path, token, options = {}) {
+  const purposeHeader = encodeURIComponent(String(options.purpose || '').trim()).slice(0, 512);
   const headers = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
-    'X-Purpose-Scope': options.purpose || '',
+    'X-Purpose-Scope': purposeHeader,
     'X-Correlation-Id': randomKey('corr'),
     ...(options.idempotencyKey ? { 'X-Idempotency-Key': options.idempotencyKey } : {}),
     ...(options.stepUpToken ? { 'X-Step-Up-Token': options.stepUpToken } : {}),
@@ -130,6 +133,7 @@ function Table({ headers, children }) {
 
 function AdminGovernancePanel({ user, token, apiUrl, onLogout }) {
   const role = user?.role || 'super_admin';
+  const { menuId, menuOpen, closeMenu, toggleMenu } = usePanelNavigation('admin-governance-menu');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [purpose, setPurpose] = useState('بازبینی حاکمیت بازار و کنترل دسترسی');
   const [stepUpToken, setStepUpToken] = useState(() => sessionStorage.getItem('gomrok-admin-step-up-token') || '');
@@ -256,7 +260,27 @@ function AdminGovernancePanel({ user, token, apiUrl, onLogout }) {
 
   const rendered = { dashboard: renderDashboard, users: renderUsers, organizations: renderOrganizations, qualification: renderQualification, marketplace: renderMarketplace, trips: renderTrips, cases: renderCases, audit: renderAudit, breakglass: renderBreakGlass, rulepacks: renderRulePacks, pricing: renderPricing, finance: renderFinance, claims: renderClaims, exports: renderExports, security: renderSecurity, crm: renderCrm, bi: renderBi, ai: renderAi, health: renderHealth }[activeTab]?.() || renderDashboard();
 
-  return <div className="admin-governance-shell" dir="rtl"><header className="admin-governance-header"><div className="admin-governance-brand"><span>G</span><div><strong>GOMROK</strong><small>Marketplace Governance</small></div></div><div className="admin-governance-header__scope"><label><span>Purpose scope</span><input value={purpose} onChange={(event) => setPurpose(event.target.value)} aria-label="Purpose scope" /></label><label><span>Step-up token</span><input value={stepUpToken} onChange={(event) => saveStepUp(event.target.value)} placeholder="از IAM" aria-label="Step-up token" /></label><button type="button" onClick={onLogout}>خروج</button></div></header><div className="admin-governance-layout"><aside className="admin-governance-sidebar"><div className="admin-governance-sidebar__role"><span>STAFF CONSOLE</span><strong>{roleTitle}</strong><small>Server authorization active</small></div><nav>{allowedMenu.map(([key, label]) => <button key={key} type="button" className={activeTab === key ? 'is-active' : ''} onClick={() => setActiveTab(key)}><span>{key === 'dashboard' ? '⌂' : key === 'audit' ? '◈' : key === 'security' ? '◉' : '▦'}</span>{label}</button>)}</nav><div className="admin-governance-sidebar__note">Role ≠ permission<br />ABAC + purpose + audit</div></aside><main className="admin-governance-main"><div className="admin-governance-main__heading"><div><span className="admin-governance-kicker">{roleTitle}</span><h1>{menu.find(([key]) => key === activeTab)?.[1] || 'داشبورد'}</h1></div><button className="platform-button" type="button" onClick={() => load(activeTab)} disabled={loading}>{loading ? 'در حال دریافت…' : 'بروزرسانی'}</button></div>{notice && <div className={`admin-governance-notice ${noticeTone ? `admin-governance-notice--${noticeTone}` : ''}`}>{notice}</div>}{rendered}</main></div><footer className="admin-governance-footer"><span>GOMROK · no blanket Super Admin business access</span><span>Quote body / raw location / raw contact masked by default</span></footer></div>;
+  const selectAdminTab = (key) => {
+    closeMenu();
+    setActiveTab(key);
+  };
+
+  return <div className="admin-governance-shell" dir="rtl">
+    <header className="admin-governance-header">
+      <div className="admin-governance-header__primary"><PanelMenuButton open={menuOpen} onClick={toggleMenu} controls={menuId} inverse /><div className="admin-governance-brand"><ProductLogo inverse subtitle="حاکمیت بازار و امنیت" /></div></div>
+      <div className="admin-governance-header__scope"><label><span>هدف دسترسی</span><input value={purpose} onChange={(event) => setPurpose(event.target.value)} aria-label="هدف دسترسی" /></label><label><span>توکن احراز تکمیلی</span><input value={stepUpToken} onChange={(event) => saveStepUp(event.target.value)} placeholder="دریافت‌شده از IAM" aria-label="توکن احراز تکمیلی" /></label><button type="button" onClick={onLogout}>خروج</button></div>
+    </header>
+    <div className="admin-governance-layout">
+      <PanelSidebar open={menuOpen} onClose={closeMenu} id={menuId} className="admin-governance-sidebar" title="منوی حاکمیت و مدیریت" subtitle={roleTitle} dark>
+        <div className="admin-governance-sidebar__role"><span>کنسول اپراتور</span><strong>{roleTitle}</strong><small>مجوزدهی سمت سرور فعال است</small></div>
+        <div className="admin-governance-mobile-scope"><label><span>هدف دسترسی</span><input value={purpose} onChange={(event) => setPurpose(event.target.value)} /></label><label><span>توکن احراز تکمیلی</span><input value={stepUpToken} onChange={(event) => saveStepUp(event.target.value)} placeholder="دریافت‌شده از IAM" /></label></div>
+        <nav>{allowedMenu.map(([key, label]) => <button key={key} type="button" className={activeTab === key ? 'is-active' : ''} aria-current={activeTab === key ? 'page' : undefined} onClick={() => selectAdminTab(key)}><NavigationIcon section={key} /><span>{label}</span></button>)}</nav>
+        <div className="admin-governance-sidebar__note">نقش به‌تنهایی مجوز نیست<br />دامنه + هدف + حسابرسی</div>
+      </PanelSidebar>
+      <main className="admin-governance-main"><div className="admin-governance-main__heading"><div><span className="admin-governance-kicker">{roleTitle}</span><h1>{menu.find(([key]) => key === activeTab)?.[1] || 'داشبورد'}</h1></div><button className="platform-button" type="button" onClick={() => load(activeTab)} disabled={loading}>{loading ? 'در حال دریافت…' : 'به‌روزرسانی'}</button></div>{notice && <div className={`admin-governance-notice ${noticeTone ? `admin-governance-notice--${noticeTone}` : ''}`}>{notice}</div>}{rendered}</main>
+    </div>
+    <footer className="admin-governance-footer"><span>GOMROK · دسترسی کامل تجاری برای هیچ نقش عمومی وجود ندارد</span><span>قیمت، موقعیت خام و تماس کامل به‌صورت پیش‌فرض محافظت می‌شوند</span></footer>
+  </div>;
 }
 
 export default AdminGovernancePanel;

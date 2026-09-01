@@ -42,6 +42,20 @@ Mobile-first customs and transport platform foundation.
 
 The React mobile app runs on `http://127.0.0.1:5083`. The API runs on `http://127.0.0.1:4000`.
 
+Development-only design previews (these routes are disabled in production builds):
+
+- `http://127.0.0.1:5083/app/preview` — visual review hub for all panels and public pages
+- `http://127.0.0.1:5083/app/preview/shipper` — Shipper / صاحب بار
+- `http://127.0.0.1:5083/app/preview/company-x` — Company X
+- `http://127.0.0.1:5083/app/preview/company-y` — Company Y / Carrier
+- `http://127.0.0.1:5083/app/preview/driver` — Driver mobile app
+- `http://127.0.0.1:5083/app/preview/agent` — Agent Z / destination
+- `http://127.0.0.1:5083/app/preview/admin` — Admin / Governance
+
+The preview hub also links directly to `/app`, `/driver-login`, `/carrier-login`, `/app/driver`, `/app/careers`, and `/admin/v2`. Panel previews render the real components with empty local read models so navigation, responsive layout, states, and interaction design can be reviewed without registration or production data. They do not weaken production authentication or authorization.
+
+The Route Pulse design system is implemented in `client/src/route-pulse.css`, `client/src/components/ProductIcon.jsx`, and `design/tokens.json`. Its brand foundation uses `#140e04`, `#ededff`, `#0afa82`, `#4363ea`, and `#4c7cff` with RTL-first responsive behavior.
+
 The current `/app/driver` and `/app/careers` flows collect the requested base information as pending registration requests. An admin must approve a request before the driver or carrier account is created. The `/admin/v2` workspace is the Marketplace Governance console: staff roles, tenant-scoped organizations, human KYC/qualification decisions, sealed RFQ monitoring, risk/compliance/conflict queues, append-only audit, dual-control Break-Glass, versioned RulePacks, relationship-ledger governance, contact-reveal/export oversight, AI monitor and technical health are separately authorized by the server.
 
 ## Shared platform contract foundation

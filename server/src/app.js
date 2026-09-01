@@ -191,7 +191,7 @@ function publicRegistration(row) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     source: 'registration',
-    label: isDriver ? 'راننده' : 'کرییر'
+    label: isDriver ? 'راننده' : 'شرکت حمل‌ونقل'
   };
 }
 
@@ -233,7 +233,7 @@ function registrationRole(role) {
 function roleConfig(role) {
   return role === 'driver'
     ? { table: 'drivers', label: 'راننده', plural: 'راننده‌ها' }
-    : { table: 'carriers', label: 'کرییر', plural: 'کرییرها' };
+    : { table: 'carriers', label: 'شرکت حمل‌ونقل', plural: 'شرکت‌های حمل‌ونقل' };
 }
 
 function cleanManagerName(payload) {
@@ -282,7 +282,7 @@ function validateCarrier(payload) {
     !/^09\d{9}$/.test(payload.phone) ||
     !payload.province
   ) {
-    return 'اطلاعات کرییر کامل یا معتبر نیست.';
+    return 'اطلاعات شرکت حمل‌ونقل کامل یا معتبر نیست.';
   }
   return '';
 }
@@ -362,12 +362,12 @@ async function createCarrierRegistration(payload, response) {
     const [rows] = await pool.execute('SELECT * FROM registration_requests WHERE id = ?', [result.insertId]);
     await writeAudit({ eventType: 'CarrierRegistrationRequested', subjectType: 'carrier', subjectId: result.insertId, payload: { source: 'mobile-web' } });
     return response.status(201).json({
-      message: 'درخواست ثبت‌نام کرییر ثبت شد و پس از تأیید حساب ایجاد می‌شود.',
+      message: 'درخواست ثبت‌نام شرکت حمل‌ونقل ثبت شد و پس از تأیید حساب ایجاد می‌شود.',
       registration: publicRegistration(rows[0])
     });
   } catch (error) {
     console.error(error);
-    return response.status(500).json({ message: 'ثبت درخواست کرییر انجام نشد؛ اتصال دیتابیس را بررسی کن.' });
+    return response.status(500).json({ message: 'ثبت درخواست شرکت حمل‌ونقل انجام نشد؛ اتصال دیتابیس را بررسی کن.' });
   }
 }
 
@@ -484,7 +484,7 @@ async function approveRegistration(role, id, adminUsernameValue) {
           `INSERT INTO carriers
            (tenant_id, carrier_type, business_name, registration_number, manager_first_name, manager_last_name,
             identity_number, phone, email, province, city, address, password_hash, status)
-           VALUES ('platform', 'کرییر', ?, ?, ?, '', ?, ?, NULL, ?, '', NULL, ?, 'active')`,
+           VALUES ('platform', 'شرکت حمل‌ونقل', ?, ?, ?, '', ?, ?, NULL, ?, '', NULL, ?, 'active')`,
           [registration.business_name, registration.registration_number, managerName, registration.national_identifier, registration.phone, registration.province, passwordHash]
         );
         accountId = result.insertId;
@@ -787,7 +787,7 @@ app.post('/api/auth/login-carrier', authRateLimit, async (request, response) => 
     const [rows] = await pool.execute('SELECT * FROM carriers WHERE phone = ? LIMIT 1', [phone]);
     const carrier = rows[0];
     if (!carrier || carrier.status !== 'active' || !carrier.password_hash || !(await bcrypt.compare(password, carrier.password_hash))) {
-      return response.status(401).json({ message: 'حساب کرییر فعال نیست یا اطلاعات ورود اشتباه است.' });
+      return response.status(401).json({ message: 'حساب شرکت حمل‌ونقل فعال نیست یا اطلاعات ورود اشتباه است.' });
     }
     const membership = await ensurePlatformMembership(carrier, 'carrier');
     const refreshToken = await issueRefreshToken(carrier, membership);
@@ -795,7 +795,7 @@ app.post('/api/auth/login-carrier', authRateLimit, async (request, response) => 
     return response.json({ token: issueToken(carrier, 'company_y_owner', membership), refreshToken, user: publicCarrier(carrier) });
   } catch (error) {
     console.error(error);
-    return response.status(500).json({ message: 'ورود کرییر انجام نشد؛ اتصال دیتابیس را بررسی کن.' });
+    return response.status(500).json({ message: 'ورود شرکت حمل‌ونقل انجام نشد؛ اتصال دیتابیس را بررسی کن.' });
   }
 });
 

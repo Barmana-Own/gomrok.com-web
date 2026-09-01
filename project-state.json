@@ -1,0 +1,75 @@
+{
+  "project": "GOMROK Full UI/UX Redesign",
+  "repositoryRevision": "dd06d23",
+  "activeStage": "12-fullstack-final-review",
+  "projectStatus": "COMPLETE",
+  "backup": {
+    "path": "backups/gomrok-current-ui-before-full-redesign-2026-08-31.zip",
+    "sha256": "9250B89E9DB103C2E24AE887D7E48E7B11EA7760DB9933DADB69AEB5C8D3695B",
+    "entries": 110,
+    "excluded": [".git", "node_modules", "dist", ".npm-cache", ".qa", "backups"],
+    "verified": true
+  },
+  "designPalette": {
+    "text": "#140e04",
+    "background": "#ededff",
+    "primary": "#0afa82",
+    "secondary": "#4363ea",
+    "accent": "#4c7cff"
+  },
+  "stages": {
+    "01": { "status": "PASS", "artifacts": ["docs/01-project-brief.md", "docs/01-requirements.md", "project-integrity-manifest.md"] },
+    "02": { "status": "PASS", "artifacts": ["docs/02-design-system.md", "docs/02-ui-architecture.md", "design/tokens.json"] },
+    "03": { "status": "PASS", "artifacts": ["docs/03-frontend-architecture.md", "client/src/route-pulse.css", "client/src/components/ProductIcon.jsx", "client/src/components/ResponsivePanelNav.jsx", "client/public/images/gomrok-mark.svg", "client/public/images/gomrok-driver-onboarding.jpg", "client/public/images/gomrok-carrier-onboarding.jpg"] },
+    "04": { "status": "PASS", "artifacts": ["docs/04-backend-architecture.md"] },
+    "05": { "status": "PASS", "artifacts": ["docs/05-database-architecture.md"] },
+    "06": { "status": "PASS", "artifacts": ["docs/06-api-design.md"] },
+    "07": { "status": "PASS", "artifacts": ["docs/07-authentication-authorization.md"] },
+    "08": { "status": "PASS", "artifacts": ["docs/08-security-review.md"] },
+    "09": { "status": "PASS", "artifacts": ["docs/09-test-plan.md", "docs/09-test-results.md"] },
+    "10": { "status": "PASS", "artifacts": ["docs/10-qa-report.md", "docs/10-known-issues.md"] },
+    "11": { "status": "PASS", "artifacts": ["docs/11-deployment.md", "docs/11-operations-runbook.md"] },
+    "12": { "status": "PASS", "artifacts": ["docs/12-final-review.md", "release-manifest.json"] }
+  },
+  "assumptions": [
+    "The existing frontend architecture and API contracts remain authoritative.",
+    "The supplied five colors define the new brand foundation.",
+    "Preview routes remain development-only and contain no production data."
+  ],
+  "risks": [
+    "Live database and production IAM verification require external runtime configuration.",
+    "The existing process-local realtime broker requires shared pub/sub before horizontal API scaling."
+  ],
+  "validation": {
+    "frontendBuild": "PASS",
+    "serverTests": "PASS: 19/19",
+    "dependencyAudit": "PASS: 0 known vulnerabilities",
+    "publicRoleEntryFlow": "PASS: driver/carrier role cards route to role-specific login, then matching registration CTA",
+    "registrationFieldPresentation": "PASS: registration placeholders removed and click focus remains a single clean field outline on driver and carrier forms",
+    "welcomeBrandAlignment": "PASS: welcome status pill remains on the left and GOMROK logo block on the right in RTL, including 390px mobile layout",
+    "carrierTerminology": "PASS: user-facing Persian carrier labels use شرکت حمل‌ونقل across login, registration, account, admin and API feedback surfaces",
+    "responsiveQa": "PASS: 360-1440, Persian RTL public/login/registration surfaces and six panels; no visible viewport overflow",
+    "responsiveNavigation": "PASS: six panel hamburger drawers, Escape/backdrop/selection close, focus restoration, desktop sidebar preservation",
+    "console": "PASS: no error or warning entries",
+    "dockerComposeConfig": "PASS",
+    "productionBaseAssetSmoke": "PASS: /app/ hashed JavaScript served as text/javascript",
+    "liveDatabaseMigration": "NOT_RUN: no schema change and no disposable database credentials",
+    "externalDeployment": "NOT_PERFORMED"
+  },
+  "reworkHistory": [
+    "Reset legacy Driver/Admin brand selectors that clipped the new ProductLogo.",
+    "Reset Admin navigation label sizing for Persian content.",
+    "Encoded Persian X-Purpose-Scope request header values for browser transport compatibility.",
+    "Strengthened narrow public copy wrapping and shared overlay keyboard focus behavior.",
+    "Aligned the Vite preview base with the production /app/ asset path.",
+    "Replaced tablet/mobile horizontal panel menus with reusable accessible hamburger drawers across Shipper, Company X, Company Y, Driver, Agent and Admin.",
+    "Rebuilt public onboarding and registration as true RTL layouts, replaced role artwork with two optimized generated logistics images, and corrected directional controls, registration steps, field labels and technical input direction.",
+    "Changed public driver and carrier role cards to enter the matching login page first; kept registration reachable through each login page's registration CTA.",
+    "Removed example placeholder text from driver and carrier registration inputs and eliminated the nested click-focus rectangle while keeping labels and icons clear.",
+    "Made the welcome header's RTL left/right alignment explicit and kept the security status pill visible beside the logo on narrow screens.",
+    "Replaced the previous user-facing Persian carrier terminology with شرکت حمل‌ونقل across public auth/registration, account, admin and registration feedback surfaces without changing carrier role or API identifiers."
+  ],
+  "nextStage": null,
+  "workflowStatus": "COMPLETE",
+  "updatedAt": "2026-09-01"
+}

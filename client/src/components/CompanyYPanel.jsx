@@ -9,6 +9,8 @@ import {
   RiskBadge,
   StatusTimeline
 } from './PlatformPrimitives.jsx';
+import { NavigationIcon, ProductLogo } from './ProductIcon.jsx';
+import { PanelMenuButton, PanelSidebar, usePanelNavigation } from './ResponsivePanelNav.jsx';
 
 const stateLabels = {
   CAPACITY_RFQ: 'RFQ2 ظرفیت باز',
@@ -108,8 +110,8 @@ function Card({ title, eyebrow, children, actions }) {
   return <section className="company-y-card"><div className="company-y-card__heading"><div><span className="platform-eyebrow">{eyebrow}</span><h2>{title}</h2></div>{actions}</div>{children}</section>;
 }
 
-function YHeader({ role, onLogout }) {
-  return <header className="platform-header"><div className="platform-brand"><span className="platform-brand__mark">✓</span><span><strong>GOMROK</strong><small>COMPANY Y · CARRIER OPERATIONS</small></span></div><div className="platform-header__user"><span>{roleLabels[role] || 'پنل شرکت Y'}</span><button type="button" onClick={onLogout}>خروج</button></div></header>;
+function YHeader({ role, onLogout, menuOpen, onMenuToggle, menuId }) {
+  return <header className="platform-header"><div className="platform-header__primary"><PanelMenuButton open={menuOpen} onClick={onMenuToggle} controls={menuId} inverse /><div className="platform-brand"><ProductLogo subtitle="عملیات ناوگان شرکت Y" /></div></div><div className="platform-header__user"><span>{roleLabels[role] || 'پنل شرکت Y'}</span><button type="button" onClick={onLogout}>خروج</button></div></header>;
 }
 
 function caseTimeline(item) {
@@ -129,6 +131,7 @@ function caseTimeline(item) {
 
 export default function CompanyYPanel({ user, token, apiUrl, onLogout }) {
   const role = user?.role === 'carrier' ? 'company_y_owner' : user?.role || 'company_y_owner';
+  const { menuId, menuOpen, closeMenu, toggleMenu } = usePanelNavigation('company-y-menu');
   const isOwner = role === 'company_y_owner';
   const isDocumentIssuer = role === 'company_y_document_issuer';
   const visibleMenu = menu.filter(([key]) => !isDocumentIssuer || !['rfq2', 'bids', 'drivers', 'vehicles', 'coverage', 'tracking', 'finance'].includes(key));
@@ -480,5 +483,28 @@ export default function CompanyYPanel({ user, token, apiUrl, onLogout }) {
   if (section === 'notifications') content = <Card title="اعلان‌های عملیاتی" eyebrow="Domain events → notifications"><div className="company-y-list">{notifications.map((item) => <article className="company-y-list-item" key={item.id}><span>{item.created_at}</span><strong>{item.payload?.eventName || 'Notification'}</strong><small>{item.payload?.payload?.message || item.payload?.entityType || 'رویداد ثبت‌شده'}</small></article>)}{!notifications.length && <div className="platform-empty-inline">اعلانی در صف نیست.</div>}</div></Card>;
   if (section === 'organization') content = <Card title="سازمان و کاربران" eyebrow="Tenant / organization scoped"><div className="company-y-facts"><span>Organization <b>{context?.organizationId || '—'}</b></span><span>Role <b>{roleLabels[role]}</b></span><span>Qualification <b>{context?.organizationType === 'company_y' ? 'company_y' : '—'}</b></span></div><div className="company-y-list">{members.map((member) => <article className="company-y-list-item" key={member.id}><span>{member.displayName}</span><strong>{member.role}</strong><small>{member.qualificationState} · KYC {member.kycLevel} · {member.status}</small></article>)}{!members.length && <div className="platform-empty-inline">اعضای فعال سازمان بارگذاری نشده‌اند.</div>}</div></Card>;
 
-  return <div className="company-y-shell" dir="rtl"><YHeader role={role} onLogout={onLogout} /><div className="company-y-layout"><aside className="company-y-sidebar"><div className="company-y-sidebar__intro"><span className="platform-eyebrow">{roleLabels[role] || role}</span><strong>پنل شرکت Y</strong><small>RFQ2 · Carrier · CMR/TIR</small></div><nav>{visibleMenu.map(([key, label]) => <button type="button" key={key} className={section === key ? 'is-active' : ''} onClick={() => { setSection(key); if (key === 'organization') loadMembers(); }}>{label}</button>)}</nav><div className="company-y-sidebar__guard">Market A، Customer-X price، Margin X و Bid رقبای Y در این پنل قابل مشاهده نیست. Award همیشه X → Y است.</div></aside><main className="company-y-content"><section className="platform-hero"><div><span className="platform-eyebrow">Server is source of truth · {roleLabels[role] || role}</span><h1>{visibleMenu.find(([key]) => key === section)?.[1] || 'داشبورد Carrier'}</h1><p>Coverage، Qualification، اسناد و مالی فقط در دامنه شرکت Y و سفرهای برنده خوانده می‌شود.</p></div><div className="platform-hero__status"><i /> tenant-scoped<br /><small>RFQ2 sealed · Customer-X hidden</small></div></section><div className="company-y-mobile-nav">{visibleMenu.slice(0, 7).map(([key, label]) => <button type="button" key={key} className={section === key ? 'is-active' : ''} onClick={() => setSection(key)}>{label}</button>)}</div><Notice notice={notice} />{busy && <div className="platform-loading">در حال دریافت یا ثبت read model…</div>}{!busy && content}</main></div><ApprovalDialog open={acceptOpen} title="پذیرش Award ظرفیت" description="این پذیرش فقط رابطه X-Y را فعال می‌کند؛ Award مستقیم به Driver وجود ندارد و Nomination بعدی باید از Coverage و مدارک عبور کند." busy={busy} onCancel={() => setAcceptOpen(false)} onConfirm={acceptAward} /><AuditDrawer open={auditOpen} items={auditItems} onClose={() => setAuditOpen(false)} /></div>;
+  const selectMenuSection = (key) => {
+    closeMenu();
+    setSection(key);
+    if (key === 'organization') loadMembers();
+  };
+
+  return <div className="company-y-shell" dir="rtl">
+    <YHeader role={role} onLogout={onLogout} menuOpen={menuOpen} onMenuToggle={toggleMenu} menuId={menuId} />
+    <div className="company-y-layout">
+      <PanelSidebar open={menuOpen} onClose={closeMenu} id={menuId} className="company-y-sidebar" title="منوی ناوگان شرکت Y" subtitle={roleLabels[role] || role}>
+        <div className="company-y-sidebar__intro"><span className="platform-eyebrow">{roleLabels[role] || role}</span><strong>پنل شرکت Y</strong><small>RFQ2 · Carrier · CMR/TIR</small></div>
+        <nav>{visibleMenu.map(([key, label]) => <button type="button" key={key} className={section === key ? 'is-active' : ''} aria-current={section === key ? 'page' : undefined} onClick={() => selectMenuSection(key)}><NavigationIcon section={key} /><span>{label}</span></button>)}</nav>
+        <div className="company-y-sidebar__guard">قیمت مشتری، حاشیه شرکت X و پیشنهاد رقبای شرکت Y در این پنل نمایش داده نمی‌شود. Award همیشه X → Y است.</div>
+      </PanelSidebar>
+      <main className="company-y-content">
+        <section className="platform-hero"><div><span className="platform-eyebrow">منبع حقیقت: سرور · {roleLabels[role] || role}</span><h1>{visibleMenu.find(([key]) => key === section)?.[1] || 'داشبورد Carrier'}</h1><p>پوشش، صلاحیت، اسناد و امور مالی فقط در دامنه شرکت Y و سفرهای برنده نمایش داده می‌شود.</p></div><div className="platform-hero__status"><i /> دسترسی سازمانی<br /><small>RFQ2 مهرشده · اطلاعات مشتری محفوظ</small></div></section>
+        <Notice notice={notice} />
+        {busy && <div className="platform-loading">در حال دریافت یا ثبت اطلاعات…</div>}
+        {!busy && content}
+      </main>
+    </div>
+    <ApprovalDialog open={acceptOpen} title="پذیرش Award ظرفیت" description="این پذیرش فقط رابطه X-Y را فعال می‌کند؛ Award مستقیم به Driver وجود ندارد و Nomination بعدی باید از Coverage و مدارک عبور کند." busy={busy} onCancel={() => setAcceptOpen(false)} onConfirm={acceptAward} />
+    <AuditDrawer open={auditOpen} items={auditItems} onClose={() => setAuditOpen(false)} />
+  </div>;
 }

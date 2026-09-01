@@ -1,21 +1,25 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { provinces } from './data/iranLocations.js';
 import PlatformWorkspace from './components/PlatformWorkspace.jsx';
+import { Icon, ProductLogo } from './components/ProductIcon.jsx';
 const AdminGovernancePanel = lazy(() => import('./components/AdminGovernancePanel.jsx'));
 
 const APP_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? APP_BASE : 'http://127.0.0.1:4000');
-const LOGISTICS_HERO = `${import.meta.env.BASE_URL}images/gomrok-logistics-hero.webp`;
-const LOGISTICS_WAVE = `${import.meta.env.BASE_URL}images/gomrok-hero-wave.webp`;
-const LOGISTICS_ROUTE_TOP = `${import.meta.env.BASE_URL}images/gomrok-route-line-top.png`;
-const LOGISTICS_ROUTE_BOTTOM = `${import.meta.env.BASE_URL}images/gomrok-route-line-bottom.png`;
-const DRIVER_TRUCK_ICON = `${import.meta.env.BASE_URL}images/gomrok-driver-truck.webp`;
-const CARRIER_WAREHOUSE_ICON = `${import.meta.env.BASE_URL}images/gomrok-carrier-warehouse.webp`;
-const CARRIER_REGISTER_ICON = `${import.meta.env.BASE_URL}images/gomrok-carrier-register-icon.webp`;
-const BENEFIT_SPEED_ICON = `${import.meta.env.BASE_URL}images/gomrok-benefit-speed.webp`;
-const BENEFIT_SECURITY_ICON = `${import.meta.env.BASE_URL}images/gomrok-benefit-security.webp`;
-const BENEFIT_SUPPORT_ICON = `${import.meta.env.BASE_URL}images/gomrok-benefit-support.webp`;
-
+const onboardingVisuals = {
+  driver: {
+    src: `${APP_BASE}/images/gomrok-driver-onboarding.jpg`,
+    width: 1536,
+    height: 1024,
+    alt: 'راننده حرفه‌ای در کنار کامیون باری در شبکه حمل‌ونقل گمرک'
+  },
+  carrier: {
+    src: `${APP_BASE}/images/gomrok-carrier-onboarding.jpg`,
+    width: 1774,
+    height: 887,
+    alt: 'مدیر ناوگان و کامیون‌ها در پایانه عملیاتی شرکت حمل'
+  }
+};
 const emptyRegistration = {
   firstName: '',
   lastName: '',
@@ -48,44 +52,34 @@ async function apiRequest(path, options = {}) {
 }
 
 function Brand({ variant = 'default' }) {
-  return (
-    <div className="brand">
-      <span className={`brand__mark${variant === 'welcome' ? ' brand__mark--wing' : ''}`} aria-hidden="true">
-        {variant === 'welcome' ? (
-          <svg viewBox="0 0 44 32" role="presentation">
-            <path d="M2 18 31 4l10 4-20 11-9 10-7-3 8-8Z" fill="currentColor" />
-            <path d="m17 20 18-9 6 3-17 10-9 5-5-2 7-7Z" fill="currentColor" opacity=".82" />
-            <path d="m5 12 11-5 7 2-12 6-6 1Z" fill="#ef6b4f" />
-            <path d="m14 8 8-3 7 2-8 4Z" fill="#4c85ed" />
-          </svg>
-        ) : '✓'}
-      </span>
-      <span>
-        <strong>سامانه گمرک</strong>
-        <small>gomrok.org · حمل‌ونقل بین‌المللی</small>
-      </span>
-    </div>
-  );
+  return <div className={`brand${variant === 'welcome' ? ' brand--welcome' : ''}`}><ProductLogo subtitle="شبکه هوشمند حمل‌ونقل و گمرک" /></div>;
 }
 
 function FormIcon({ name }) {
-  const icons = {
-    building: <><path d="M3 20h18" /><path d="M5 20V7l7-4 7 4v13" /><path d="M8 9h2v3H8zm6 0h2v3h-2zM8 15h2v3H8zm6 0h2v3h-2z" /></>,
-    user: <><circle cx="12" cy="7" r="3.2" /><path d="M5.5 20c.5-4 2.5-6 6.5-6s6 2 6.5 6" /></>,
-    identity: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8" cy="10" r="2" /><path d="M13 9h5M13 13h5M6 16h12" /></>,
-    phone: <path d="M7.2 3.5 5.6 5.1c-.8.8-.7 2.4.1 4.2 1.3 2.9 4.1 5.7 7 7 .1 0 .2.1.3.1 1.7.7 3.3.8 4.1 0l1.7-1.7c.4-.4.4-1 0-1.4l-2.2-2.2c-.4-.4-1-.4-1.4 0l-1 1c-1.3-.6-3-2.3-3.6-3.6l1-1c.4-.4.4-1 0-1.4L8.6 3.5c-.4-.4-1-.4-1.4 0Z" />,
-    location: <><path d="M19 10c0 4.3-7 10-7 10s-7-5.7-7-10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10" r="2.2" /></>,
-    lock: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></>,
-    mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></>,
-    address: <><path d="M4 20h16M6 20V8l6-4 6 4v12" /><path d="M9 20v-5h6v5M9 10h1M14 10h1" /></>
-  };
-  return <svg className="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icons[name] || icons.user}</svg>;
+  return <Icon className="field-icon" name={name} size={22} />;
 }
 
-function Field({ label, name, value, onChange, type = 'text', placeholder, inputMode, autoComplete, wide = false, compact = false, icon }) {
+function OnboardingImage({ role, className = '', decorative = false, loading = 'eager' }) {
+  const visual = onboardingVisuals[role] || onboardingVisuals.driver;
+  return (
+    <img
+      className={className}
+      src={visual.src}
+      width={visual.width}
+      height={visual.height}
+      alt={decorative ? '' : visual.alt}
+      loading={loading}
+      decoding="async"
+      fetchPriority={loading === 'eager' ? 'high' : 'auto'}
+    />
+  );
+}
+
+function Field({ label, name, value, onChange, type = 'text', placeholder, inputMode, autoComplete, wide = false, compact = false, icon, required = false, maxLength }) {
+  const technicalInput = inputMode === 'numeric' || inputMode === 'tel';
   return (
     <label className={`field${wide ? ' field--wide' : ''}${compact ? ' field--compact' : ''}`}>
-      {!compact && <span>{label}</span>}
+      <span className={compact ? 'field__compact-label' : 'field__label'}>{label}{required && <b aria-hidden="true"> *</b>}</span>
       {compact && <span className="field__icon">{icon}</span>}
       <input
         name={name}
@@ -94,8 +88,10 @@ function Field({ label, name, value, onChange, type = 'text', placeholder, input
         type={type}
         inputMode={inputMode}
         autoComplete={autoComplete}
-        placeholder={compact ? (placeholder || label) : placeholder}
-        aria-label={compact ? label : undefined}
+        placeholder={placeholder}
+        dir={technicalInput ? 'ltr' : 'rtl'}
+        required={required}
+        maxLength={maxLength}
       />
     </label>
   );
@@ -110,13 +106,20 @@ function CustomSelect({ label, value, onChange, options, placeholder, disabled =
     const close = (event) => {
       if (!rootRef.current?.contains(event.target)) setOpen(false);
     };
+    const closeWithKeyboard = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
     document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
+    document.addEventListener('keydown', closeWithKeyboard);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', closeWithKeyboard);
+    };
   }, []);
 
   return (
     <label className={`field${compact ? ' field--compact' : ''}`} ref={rootRef}>
-      {!compact && <span>{label}</span>}
+      <span className={compact ? 'field__compact-label' : 'field__label'}>{label}</span>
       {compact && <span className="field__icon">{icon}</span>}
       <div className={`select ${open ? 'select--open' : ''}`}>
         <button
@@ -128,7 +131,7 @@ function CustomSelect({ label, value, onChange, options, placeholder, disabled =
           onClick={() => setOpen((current) => !current)}
         >
           <span className={value ? '' : 'select__placeholder'}>{selectedLabel}</span>
-          <b aria-hidden="true">⌄</b>
+          <b aria-hidden="true"><Icon name="chevron" size={18} /></b>
         </button>
         {open && !disabled && (
           <div className="select__menu" role="listbox">
@@ -158,66 +161,87 @@ function AuthHeader() {
   return (
     <header className="auth-header">
       <Brand />
-      <span className="secure-pill"><i /> ارتباط امن</span>
+      <span className="secure-pill"><Icon name="shield" size={16} /> ارتباط امن</span>
     </header>
   );
 }
 
 function LogisticsIllustration() {
   return (
-    <div className="logistics-art" aria-hidden="true">
-      <img className="logistics-art__scene" src={LOGISTICS_HERO} alt="" width="1000" height="1000" fetchPriority="high" decoding="async" />
-      <img className="logistics-art__wave" src={LOGISTICS_WAVE} alt="" width="960" height="320" decoding="async" />
+    <div className="logistics-art">
+      <div className="logistics-art__primary">
+        <OnboardingImage role="carrier" className="logistics-art__image" />
+        <span className="logistics-art__route"><Icon name="route" size={17} /> تهران · بازرگان · استانبول</span>
+      </div>
+      <div className="logistics-art__secondary">
+        <OnboardingImage role="driver" className="logistics-art__image" decorative />
+        <span><Icon name="tracking" size={16} /> ردیابی زنده</span>
+      </div>
+      <div className="logistics-art__status">
+        <i><Icon name="shield" size={20} /></i>
+        <span><strong>عملیات تأییدشده</strong><small>مدارک، مسیر و تحویل در یک جریان امن</small></span>
+      </div>
+      <span className="logistics-art__pulse logistics-art__pulse--one" />
+      <span className="logistics-art__pulse logistics-art__pulse--two" />
     </div>
   );
 }
 
 function TruckLineIcon() {
-  return (
-    <img className="role-card__art" src={DRIVER_TRUCK_ICON} alt="" width="640" height="480" loading="lazy" decoding="async" />
-  );
+  return <OnboardingImage role="driver" className="role-card__art" decorative />;
 }
 
 function WarehouseLineIcon() {
+  return <OnboardingImage role="carrier" className="role-card__art" decorative />;
+}
+
+function AuthVisual({ role }) {
+  const isCarrier = role === 'carrier';
   return (
-    <img className="role-card__art" src={CARRIER_WAREHOUSE_ICON} alt="" width="640" height="480" loading="lazy" decoding="async" />
+    <aside className={`auth-visual auth-visual--${role}`}>
+      <OnboardingImage role={role} className="auth-visual__image" />
+      <div className="auth-visual__content">
+        <span><Icon name="shield" size={16} /> GOMROK CONTROL NETWORK</span>
+        <strong>{isCarrier ? 'ناوگان و فرصت‌ها، در یک دید عملیاتی.' : 'هر سفر، یک مسیر روشن و امن.'}</strong>
+        <small>{isCarrier ? 'ورود به مرکز عملیات شرکت حمل' : 'ورود به اپ عملیاتی رانندگان'}</small>
+      </div>
+    </aside>
   );
 }
 
-function RoleSelectionPage({ onDriverRegister, onCarrierRegister }) {
+function RoleSelectionPage({ onDriverLogin, onCarrierLogin }) {
   return (
     <div className="screen screen--welcome">
       <main className="role-main">
+        <div className="welcome-brand"><Brand variant="welcome" /><span className="secure-pill"><Icon name="shield" size={15} /> زیرساخت امن و قابل حسابرسی</span></div>
         <LogisticsIllustration />
-        <img className="role-main__route role-main__route--top" src={LOGISTICS_ROUTE_TOP} alt="" aria-hidden="true" width="887" height="1774" fetchPriority="high" decoding="async" />
-        <img className="role-main__route role-main__route--bottom" src={LOGISTICS_ROUTE_BOTTOM} alt="" aria-hidden="true" width="887" height="1774" loading="lazy" decoding="async" />
         <section className="welcome-copy">
-          <span className="eyebrow">شروع همکاری</span>
-          <h1>سامانه حمل و نقل گمرک</h1>
-          <p className="lead">برای دریافت خدمات هوشمند گمرکی و حمل‌ونقل بین‌المللی، نقش خودت را انتخاب کن.</p>
+          <span className="eyebrow"><Icon name="route" size={16} /> شروع یک مسیر مطمئن</span>
+          <h1>عملیات حمل‌ونقل،<br /><em>روشن و قابل کنترل.</em></h1>
+          <p className="lead">از ثبت بار تا تحویل و تسویه، همه‌چیز در یک شبکه امن، شفاف و متصل.</p>
         </section>
 
         <section className="role-cards" aria-label="انتخاب نوع حساب">
-          <button className="role-card role-card--driver" type="button" onClick={onDriverRegister}>
+          <button className="role-card role-card--driver" type="button" onClick={onDriverLogin}>
             <span className="role-card__icon"><TruckLineIcon /></span>
-            <span className="role-card__copy"><strong>راننده</strong><small>حمل بار و انجام تشریفات</small></span>
-            <b aria-hidden="true">←</b>
+            <span className="role-card__copy"><strong>راننده هستم</strong><small>ورود به حساب یا ثبت‌نام جدید</small></span>
+            <b aria-hidden="true"><Icon name="arrow" size={20} /></b>
           </button>
-          <button className="role-card role-card--carrier" type="button" onClick={onCarrierRegister}>
+          <button className="role-card role-card--carrier" type="button" onClick={onCarrierLogin}>
             <span className="role-card__icon"><WarehouseLineIcon /></span>
-            <span className="role-card__copy"><strong>کرییر</strong><small>مدیریت حمل‌ونقل و ناوگان</small></span>
-            <b aria-hidden="true">←</b>
+            <span className="role-card__copy"><strong>شرکت حمل هستم</strong><small>ورود به پنل یا ثبت‌نام شرکت</small></span>
+            <b aria-hidden="true"><Icon name="arrow" size={20} /></b>
           </button>
         </section>
 
         <section className="role-benefits" aria-label="مزیت‌های سامانه">
-          <div className="role-benefit"><img src={BENEFIT_SECURITY_ICON} alt="" width="128" height="128" loading="lazy" decoding="async" /><span>تسویه امن</span></div>
+          <div className="role-benefit"><Icon name="shield" size={20} /><span>تسویه امن</span></div>
           <i aria-hidden="true" />
-          <div className="role-benefit"><img src={BENEFIT_SUPPORT_ICON} alt="" width="128" height="128" loading="lazy" decoding="async" /><span>پشتیبانی تخصصی</span></div>
+          <div className="role-benefit"><Icon name="support" size={20} /><span>پشتیبانی تخصصی</span></div>
           <i aria-hidden="true" />
-          <div className="role-benefit"><img src={BENEFIT_SPEED_ICON} alt="" width="128" height="128" loading="lazy" decoding="async" /><span>سریع و شفاف</span></div>
+          <div className="role-benefit"><Icon name="tracking" size={20} /><span>سریع و شفاف</span></div>
         </section>
-        <p className="role-registration-note">ثبت‌نام اولیه رایگان است؛ سامانه در حال توسعه است.</p>
+        <p className="role-registration-note">ثبت‌نام اولیه رایگان است · اطلاعات شما در محدوده دسترسی سازمانی محافظت می‌شود.</p>
       </main>
     </div>
   );
@@ -255,28 +279,31 @@ function LoginPage({ initialRole = 'driver', onRoleChange, onDriverRegister, onC
   };
 
   return (
-    <div className="screen">
+    <div className="screen screen--auth">
       <AuthHeader />
-      <main className="auth-main">
+      <div className="auth-layout">
+        <AuthVisual role={isCarrier ? 'carrier' : 'driver'} />
+      <main className="auth-main auth-layout__form">
         <div className="role-switch" aria-label="انتخاب نوع حساب">
           <button className={!isCarrier ? 'role-switch__active' : ''} type="button" onClick={() => changeRole('driver')}>راننده</button>
-          <button className={isCarrier ? 'role-switch__active' : ''} type="button" onClick={() => changeRole('carrier')}>کرییر</button>
+          <button className={isCarrier ? 'role-switch__active' : ''} type="button" onClick={() => changeRole('carrier')}>شرکت حمل‌ونقل</button>
         </div>
-        <span className="eyebrow">{isCarrier ? 'پنل اختصاصی کرییرها' : 'پنل اختصاصی رانندگان'}</span>
-        <h1>{isCarrier ? 'خوش آمدی، کرییر' : 'خوش آمدی، راننده'}</h1>
-        <p className="lead">{isCarrier ? 'برای مدیریت ناوگان و بارها وارد حساب کرییر شو.' : 'برای دیدن سفرها و مأموریت‌ها وارد حساب خودت شو.'}</p>
+        <span className="eyebrow"><Icon name={isCarrier ? 'fleet' : 'driver'} size={16} /> {isCarrier ? 'پنل اختصاصی شرکت‌های حمل' : 'اپ عملیاتی رانندگان'}</span>
+        <h1>{isCarrier ? 'خوش آمدی، شرکت حمل‌ونقل' : 'خوش آمدی، راننده'}</h1>
+        <p className="lead">{isCarrier ? 'برای مدیریت ناوگان و بارها وارد حساب شرکت حمل‌ونقل شو.' : 'برای دیدن سفرها و مأموریت‌ها وارد حساب خودت شو.'}</p>
 
         <form className="auth-card" onSubmit={submit}>
-          <div className="card-title"><span>ورود به حساب {isCarrier ? 'کرییر' : 'راننده'}</span><b>۱</b></div>
+          <div className="card-title"><span>ورود به حساب {isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}</span><b><Icon name="lock" size={17} /></b></div>
           <Field label="شماره موبایل" name="phone" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="۰۹۱۲۱۲۳۴۵۶۷" inputMode="tel" autoComplete="tel" />
           <Field label="رمز عبور" name="password" value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="رمز عبور خود را وارد کن" autoComplete="current-password" />
           {notice && <p className="notice notice--error">{notice}</p>}
-          <button className="primary-button" type="submit" disabled={busy}>{busy ? 'در حال ورود…' : `ورود به پنل ${isCarrier ? 'کرییر' : 'راننده'}`}</button>
+          <button className="primary-button" type="submit" disabled={busy}>{busy ? 'در حال ورود…' : `ورود به پنل ${isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}`}</button>
           <button className="text-button" type="button">فراموشی رمز عبور؟</button>
         </form>
 
-        <div className="auth-switch">{isCarrier ? 'حساب کرییر نداری؟' : 'حساب راننده نداری؟'} <button type="button" onClick={isCarrier ? onCarrierRegister : onDriverRegister}>ثبت‌نام کن</button></div>
+        <div className="auth-switch">{isCarrier ? 'حساب شرکت حمل‌ونقل نداری؟' : 'حساب راننده نداری؟'} <button type="button" onClick={isCarrier ? onCarrierRegister : onDriverRegister}>ثبت‌نام کن</button></div>
       </main>
+      </div>
     </div>
   );
 }
@@ -311,20 +338,24 @@ function RegisterPage({ onBack, onRegistered }) {
   return (
     <div className="screen screen--register screen--driver-register">
       <RegisterHeader role="driver" onBack={onBack} />
-      <main className="auth-main auth-main--register register-main">
+      <main className="register-main">
+        <RegistrationVisual role="driver" />
+        <section className="register-main__form-column">
         <form className="auth-card auth-card--register register-form" onSubmit={submit}>
           <div className="register-form__intro"><strong>اطلاعات راننده</strong><small>اطلاعات شما پس از بررسی ادمین به حساب کاربری تبدیل می‌شود.</small></div>
           <div className="form-grid form-grid--register">
-            <Field label="نام" name="firstName" value={form.firstName} onChange={update} placeholder="نام" autoComplete="given-name" compact icon={<FormIcon name="user" />} />
-            <Field label="نام خانوادگی" name="lastName" value={form.lastName} onChange={update} placeholder="نام خانوادگی" autoComplete="family-name" compact icon={<FormIcon name="user" />} />
-            <Field label="کد ملی" name="nationalId" value={form.nationalId} onChange={update} placeholder="کد ملی" inputMode="numeric" compact icon={<FormIcon name="identity" />} />
-            <Field label="شماره تماس" name="phone" value={form.phone} onChange={update} placeholder="شماره تماس" inputMode="tel" autoComplete="tel" compact icon={<FormIcon name="phone" />} />
-            <CustomSelect label="استان" value={form.province} onChange={(province) => setForm((current) => ({ ...current, province }))} options={provinces} placeholder="استان محل سکونت" compact icon={<FormIcon name="location" />} />
+            <Field label="نام" name="firstName" value={form.firstName} onChange={update} autoComplete="given-name" compact required maxLength={60} icon={<FormIcon name="user" />} />
+            <Field label="نام خانوادگی" name="lastName" value={form.lastName} onChange={update} autoComplete="family-name" compact required maxLength={80} icon={<FormIcon name="user" />} />
+            <Field label="کد ملی" name="nationalId" value={form.nationalId} onChange={update} inputMode="numeric" compact required maxLength={10} icon={<FormIcon name="identity" />} />
+            <Field label="شماره تماس" name="phone" value={form.phone} onChange={update} inputMode="tel" autoComplete="tel" compact required maxLength={11} icon={<FormIcon name="phone" />} />
+            <CustomSelect label="استان" value={form.province} onChange={(province) => setForm((current) => ({ ...current, province }))} options={provinces} compact icon={<FormIcon name="location" />} />
           </div>
 
           {notice && <p className="notice notice--error">{notice}</p>}
           <button className="primary-button register-form__submit" type="submit" disabled={busy}>{busy ? 'در حال ثبت اطلاعات…' : 'ارسال اطلاعات راننده'}</button>
         </form>
+        <p className="register-main__privacy"><Icon name="lock" size={15} /> اطلاعات هویتی فقط برای احراز صلاحیت و فعال‌سازی حساب استفاده می‌شود.</p>
+        </section>
       </main>
     </div>
   );
@@ -333,17 +364,16 @@ function RegisterPage({ onBack, onRegistered }) {
 function RegisterHeader({ role, onBack }) {
   const isCarrier = role === 'carrier';
   const steps = ['اطلاعات پایه', 'بررسی اطلاعات', 'ایجاد حساب'];
-  const icon = isCarrier ? CARRIER_REGISTER_ICON : DRIVER_TRUCK_ICON;
 
   return (
     <header className={`register-header register-header--${role}`}>
-      <button className="register-header__back" type="button" onClick={onBack} aria-label="بازگشت به انتخاب نقش">←</button>
-      <div className="register-header__title"><strong>ثبت‌نام {isCarrier ? 'کرییر' : 'راننده'}</strong><small>gomrok.org</small></div>
-      <span className="register-header__icon"><img src={icon} alt="" /></span>
+      <button className="register-header__back" type="button" onClick={onBack} aria-label="بازگشت به انتخاب نقش"><Icon name="arrow" size={22} /></button>
+      <div className="register-header__title"><strong>ثبت‌نام {isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}</strong><small>gomrok.org</small></div>
+      <span className="register-header__icon"><OnboardingImage role={isCarrier ? 'carrier' : 'driver'} decorative /></span>
       <div className="register-steps" aria-label="مراحل ثبت‌نام">
         {steps.map((step, index) => (
           <span className={`register-step${index === 0 ? ' register-step--active' : ''}`} key={step}>
-            <b>{index === 0 ? '✓' : index + 1}</b><small>{step}</small>
+            <b>{index === 0 ? <Icon name="check" size={15} /> : index + 1}</b><small>{step}</small>
           </span>
         )).reduce((items, step, index, stepsList) => (index < stepsList.length - 1 ? [...items, step, <i key={`line-${index}`} />] : [...items, step]), [])}
       </div>
@@ -353,6 +383,25 @@ function RegisterHeader({ role, onBack }) {
 
 function CarrierRegisterHeader({ onBack }) {
   return <RegisterHeader role="carrier" onBack={onBack} />;
+}
+
+function RegistrationVisual({ role }) {
+  const isCarrier = role === 'carrier';
+  const benefits = isCarrier
+    ? ['احراز هویت سازمانی', 'فعال‌سازی فرصت‌های RFQ', 'کنترل امن ناوگان']
+    : ['احراز هویت راننده', 'دسترسی امن به مأموریت‌ها', 'ثبت مدارک و تحویل'];
+
+  return (
+    <aside className={`register-visual register-visual--${role}`}>
+      <OnboardingImage role={role} className="register-visual__image" />
+      <div className="register-visual__content">
+        <span className="register-visual__eyebrow"><Icon name={isCarrier ? 'building' : 'identity'} size={17} /> ثبت‌نام تأییدمحور</span>
+        <h2>{isCarrier ? 'شرکت حمل خود را به شبکه عملیاتی متصل کنید.' : 'مسیر حرفه‌ای خود را از یک حساب امن آغاز کنید.'}</h2>
+        <p>{isCarrier ? 'اطلاعات سازمان، مدیر و محدوده فعالیت برای فعال‌سازی پنل بررسی می‌شود.' : 'اطلاعات پایه شما برای احراز هویت و تخصیص مأموریت‌های معتبر بررسی می‌شود.'}</p>
+        <ul>{benefits.map((benefit) => <li key={benefit}><Icon name="check" size={15} /> {benefit}</li>)}</ul>
+      </div>
+    </aside>
+  );
 }
 
 function CarrierRegisterPage({ onBack, onRegistered }) {
@@ -385,21 +434,25 @@ function CarrierRegisterPage({ onBack, onRegistered }) {
   return (
     <div className="screen screen--register screen--carrier-register">
       <CarrierRegisterHeader onBack={onBack} />
-      <main className="auth-main auth-main--register register-main">
+      <main className="register-main">
+        <RegistrationVisual role="carrier" />
+        <section className="register-main__form-column">
         <form className="auth-card auth-card--register auth-card--carrier register-form" onSubmit={submit}>
-          <div className="register-form__intro"><strong>اطلاعات کرییر</strong><small>اطلاعات شرکت پس از بررسی ادمین به حساب تبدیل می‌شود.</small></div>
+          <div className="register-form__intro"><strong>اطلاعات شرکت حمل‌ونقل</strong><small>اطلاعات شرکت پس از بررسی ادمین به حساب تبدیل می‌شود.</small></div>
           <div className="form-grid form-grid--register">
-            <Field label="نام شرکت" name="businessName" value={form.businessName} onChange={update} placeholder="نام شرکت" autoComplete="organization" compact icon={<FormIcon name="building" />} />
-            <Field label="شماره ثبت" name="registrationNumber" value={form.registrationNumber} onChange={update} placeholder="شماره ثبت" inputMode="numeric" compact icon={<FormIcon name="identity" />} />
-            <Field label="شناسه ملی" name="nationalIdentifier" value={form.nationalIdentifier} onChange={update} placeholder="شناسه ملی" inputMode="numeric" compact icon={<FormIcon name="identity" />} />
-            <Field label="نام مدیرعامل" name="managerName" value={form.managerName} onChange={update} placeholder="نام مدیرعامل" autoComplete="name" compact icon={<FormIcon name="user" />} />
-            <Field label="شماره تماس" name="phone" value={form.phone} onChange={update} placeholder="شماره تماس" inputMode="tel" autoComplete="tel" compact icon={<FormIcon name="phone" />} />
-            <CustomSelect label="استان" value={form.province} onChange={(province) => setForm((current) => ({ ...current, province }))} options={provinces} placeholder="استان محل شرکت" compact icon={<FormIcon name="location" />} />
+            <Field label="نام شرکت" name="businessName" value={form.businessName} onChange={update} autoComplete="organization" compact required maxLength={120} icon={<FormIcon name="building" />} />
+            <Field label="شماره ثبت" name="registrationNumber" value={form.registrationNumber} onChange={update} inputMode="numeric" compact required maxLength={20} icon={<FormIcon name="identity" />} />
+            <Field label="شناسه ملی" name="nationalIdentifier" value={form.nationalIdentifier} onChange={update} inputMode="numeric" compact required maxLength={11} icon={<FormIcon name="identity" />} />
+            <Field label="نام مدیرعامل" name="managerName" value={form.managerName} onChange={update} autoComplete="name" compact required maxLength={100} icon={<FormIcon name="user" />} />
+            <Field label="شماره تماس" name="phone" value={form.phone} onChange={update} inputMode="tel" autoComplete="tel" compact required maxLength={11} icon={<FormIcon name="phone" />} />
+            <CustomSelect label="استان" value={form.province} onChange={(province) => setForm((current) => ({ ...current, province }))} options={provinces} compact icon={<FormIcon name="location" />} />
           </div>
 
           {notice && <p className="notice notice--error">{notice}</p>}
-          <button className="primary-button register-form__submit" type="submit" disabled={busy}>{busy ? 'در حال ثبت اطلاعات…' : 'ارسال اطلاعات کرییر'}</button>
+          <button className="primary-button register-form__submit" type="submit" disabled={busy}>{busy ? 'در حال ثبت اطلاعات…' : 'ارسال اطلاعات شرکت حمل‌ونقل'}</button>
         </form>
+        <p className="register-main__privacy"><Icon name="lock" size={15} /> اطلاعات سازمانی در محدوده دسترسی تأییدشده نگهداری می‌شود.</p>
+        </section>
       </main>
     </div>
   );
@@ -407,19 +460,19 @@ function CarrierRegisterPage({ onBack, onRegistered }) {
 
 function MaintenancePage({ user, onLogout }) {
   const isCarrier = user?.role === 'carrier';
-  const accountLabel = isCarrier ? 'کرییر' : 'راننده';
+  const accountLabel = isCarrier ? 'شرکت حمل‌ونقل' : 'راننده';
 
   return (
     <div className="screen screen--maintenance">
       <AuthHeader />
       <main className="maintenance-main">
-        <div className="maintenance-icon" aria-hidden="true"><span>↻</span></div>
+        <div className="maintenance-icon" aria-hidden="true"><Icon name="refresh" size={34} /></div>
         <span className="eyebrow">حساب {accountLabel} آماده شد</span>
         <h1>در حال بروزرسانی هستیم</h1>
         <p className="lead">ورودت با موفقیت انجام شد. بخش‌های اصلی سامانه را برای یک تجربه بهتر در حال آماده‌سازی هستیم.</p>
 
         <section className="maintenance-card">
-          <div className="maintenance-card__row"><i className="maintenance-card__dot maintenance-card__dot--done" /><span>حساب شما با موفقیت ثبت شد</span><b>✓</b></div>
+          <div className="maintenance-card__row"><i className="maintenance-card__dot maintenance-card__dot--done" /><span>حساب شما با موفقیت ثبت شد</span><b><Icon name="check" size={20} /></b></div>
           <div className="maintenance-card__line" />
           <div className="maintenance-card__row"><i className="maintenance-card__dot" /><span>راه‌اندازی پنل {accountLabel}</span><small>به‌زودی</small></div>
         </section>
@@ -440,13 +493,13 @@ function RegistrationSubmittedPage({ registration, onBack }) {
     <div className="screen screen--maintenance screen--registration-submitted">
       <AuthHeader />
       <main className="maintenance-main">
-        <div className="maintenance-icon maintenance-icon--success" aria-hidden="true"><span>✓</span></div>
+        <div className="maintenance-icon maintenance-icon--success" aria-hidden="true"><Icon name="check" size={34} /></div>
         <span className="eyebrow">ثبت اطلاعات با موفقیت انجام شد</span>
         <h1>{title}</h1>
         <p className="lead">{name || 'اطلاعات شما'} با موفقیت ثبت شد. سامانه در حال توسعه است و درخواست شما پس از بررسی در صف آماده‌سازی حساب قرار می‌گیرد.</p>
 
         <section className="maintenance-card">
-          <div className="maintenance-card__row"><i className="maintenance-card__dot maintenance-card__dot--done" /><span>اطلاعات اولیه دریافت شد</span><b>✓</b></div>
+          <div className="maintenance-card__row"><i className="maintenance-card__dot maintenance-card__dot--done" /><span>اطلاعات اولیه دریافت شد</span><b><Icon name="check" size={20} /></b></div>
           <div className="maintenance-card__line" />
           <div className="maintenance-card__row"><i className="maintenance-card__dot" /><span>سامانه در حال توسعه است</span><small>به‌زودی</small></div>
         </section>
@@ -464,7 +517,7 @@ function DriverHome({ user, onLogout }) {
       <header className="home-header"><Brand /><button className="logout-button" type="button" onClick={onLogout}>خروج</button></header>
       <main className="home-main">
         <p className="eyebrow">امروز من</p>
-        <h1>سلام {user?.firstName || 'راننده'} 👋</h1>
+        <h1>سلام {user?.firstName || 'راننده'}</h1>
         <p className="lead">وضعیت همکاری و کارهای بعدی‌ات را از همین‌جا دنبال کن.</p>
         <section className="status-card"><span>وضعیت حساب</span><strong>فعال</strong><small>{user?.province || 'ایران'} · {user?.city || 'محل سکونت ثبت‌شده'}</small></section>
         <div className="home-grid">
@@ -485,17 +538,17 @@ function CarrierHome({ user, onLogout }) {
     <div className="screen screen--home screen--carrier-home">
       <header className="home-header"><Brand /><button className="logout-button" type="button" onClick={onLogout}>خروج</button></header>
       <main className="home-main">
-        <p className="eyebrow">پنل کرییر</p>
-        <h1>{user?.businessName || 'کرییر شما'} 👋</h1>
+        <p className="eyebrow">پنل شرکت حمل‌ونقل</p>
+        <h1>{user?.businessName || 'شرکت حمل شما'}</h1>
         <p className="lead">ناوگان، راننده‌ها و درخواست‌های حمل را از همین‌جا مدیریت کن.</p>
-        <section className="status-card"><span>وضعیت حساب کرییر</span><strong>فعال</strong><small>{user?.province || 'ایران'} · {user?.city || 'محل دفتر ثبت‌شده'}</small></section>
+        <section className="status-card"><span>وضعیت حساب شرکت حمل‌ونقل</span><strong>فعال</strong><small>{user?.province || 'ایران'} · {user?.city || 'محل دفتر ثبت‌شده'}</small></section>
         <div className="home-grid">
           <article><b>۰</b><span>راننده‌های فعال</span><small>برای اتصال به ناوگان</small></article>
           <article><b>۰</b><span>خودروهای ثبت‌شده</span><small>فعلاً موردی ثبت نشده</small></article>
           <article><b>۰</b><span>درخواست حمل</span><small>در انتظار بررسی</small></article>
           <article><b>۰</b><span>تیکت باز</span><small>پشتیبانی در دسترس است</small></article>
         </div>
-        <section className="next-card"><div><span className="eyebrow">گام بعدی</span><strong>تکمیل پروفایل کرییر</strong><p>مجوز، ناوگان و راننده‌های خودت را در مرحله بعد به حساب اضافه می‌کنیم.</p></div><button type="button">بعداً</button></section>
+        <section className="next-card"><div><span className="eyebrow">گام بعدی</span><strong>تکمیل پروفایل شرکت حمل‌ونقل</strong><p>مجوز، ناوگان و راننده‌های خودت را در مرحله بعد به حساب اضافه می‌کنیم.</p></div><button type="button">بعداً</button></section>
       </main>
       <nav className="bottom-nav"><button className="bottom-nav__active" type="button">خانه</button><button type="button">ناوگان</button><button type="button">درخواست‌ها</button><button type="button">پروفایل</button></nav>
     </div>
@@ -513,10 +566,10 @@ function AdminLoginPage({ form, setForm, busy, notice, onSubmit }) {
   return (
     <div className="admin-shell admin-shell--login">
       <div className="admin-login-card">
-        <div className="admin-login-brand"><span className="admin-login-brand__mark">✓</span><span><strong>سامانه گمرک</strong><small>gomrok.org · پنل ادمین</small></span></div>
+        <div className="admin-login-brand"><ProductLogo subtitle="ورود امن مدیریت" /></div>
         <span className="admin-eyebrow">دسترسی مدیریتی امن</span>
         <h1>ورود به پنل مدیریت</h1>
-        <p className="admin-muted">اطلاعات ثبت‌نام راننده‌ها و کرییرها را از اینجا مدیریت کن.</p>
+        <p className="admin-muted">اطلاعات ثبت‌نام راننده‌ها و شرکت‌های حمل‌ونقل را از اینجا مدیریت کن.</p>
         <form className="admin-login-form" onSubmit={onSubmit}>
           <label><span>نام کاربری</span><input name="username" value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} autoComplete="username" placeholder="نام کاربری مدیر" /></label>
           <label><span>رمز عبور</span><input name="password" type="password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} autoComplete="current-password" placeholder="رمز عبور" /></label>
@@ -588,7 +641,7 @@ function AdminEditDialog({ item, role, notice, busy, onClose, onSubmit }) {
   return (
     <div className="admin-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title">
-        <div className="admin-dialog__header"><div><span className="admin-eyebrow">ویرایش اطلاعات</span><h2 id="admin-dialog-title">{isDriver ? 'ویرایش راننده' : 'ویرایش کرییر'}</h2></div><button type="button" onClick={onClose} aria-label="بستن">×</button></div>
+        <div className="admin-dialog__header"><div><span className="admin-eyebrow">ویرایش اطلاعات</span><h2 id="admin-dialog-title">{isDriver ? 'ویرایش راننده' : 'ویرایش شرکت حمل‌ونقل'}</h2></div><button type="button" onClick={onClose} aria-label="بستن">×</button></div>
         <form className="admin-edit-form" onSubmit={(event) => { event.preventDefault(); onSubmit(form); }}>
           {isDriver ? <>
             <label><span>نام</span><input name="firstName" value={form.firstName} onChange={update} /></label>
@@ -704,14 +757,14 @@ function AdminPage() {
     <div className="admin-shell">
       <div className="admin-workspace">
         <aside className="admin-sidebar">
-          <div className="admin-sidebar__brand"><span className="admin-sidebar__mark">G</span><span><strong>سامانه گمرک</strong><small>gomrok.org</small></span></div>
+          <div className="admin-sidebar__brand"><ProductLogo subtitle="مدیریت کاربران" /></div>
           <span className="admin-sidebar__caption">مدیریت کاربران</span>
           <nav className="admin-sidebar__nav" aria-label="بخش‌های پنل ادمین">
             <button type="button" className={activeTab === 'drivers' ? 'admin-sidebar__item admin-sidebar__item--active' : 'admin-sidebar__item'} onClick={() => setActiveTab('drivers')}>
-              <span className="admin-sidebar__item-icon">▣</span><span className="admin-sidebar__item-copy"><b>راننده‌ها</b><small>ثبت‌نام و حساب رانندگان</small></span><strong>{summary.drivers}</strong>
+              <span className="admin-sidebar__item-icon"><Icon name="driver" size={20} /></span><span className="admin-sidebar__item-copy"><b>راننده‌ها</b><small>ثبت‌نام و حساب رانندگان</small></span><strong>{summary.drivers}</strong>
             </button>
             <button type="button" className={activeTab === 'carriers' ? 'admin-sidebar__item admin-sidebar__item--active' : 'admin-sidebar__item'} onClick={() => setActiveTab('carriers')}>
-              <span className="admin-sidebar__item-icon">▤</span><span className="admin-sidebar__item-copy"><b>باربری‌ها</b><small>شرکت‌ها و اطلاعات ثبت‌نام</small></span><strong>{summary.carriers}</strong>
+              <span className="admin-sidebar__item-icon"><Icon name="fleet" size={20} /></span><span className="admin-sidebar__item-copy"><b>باربری‌ها</b><small>شرکت‌ها و اطلاعات ثبت‌نام</small></span><strong>{summary.carriers}</strong>
             </button>
           </nav>
           <div className="admin-sidebar__footer"><span>دسترسی ادمین</span><strong><i /> فعال و امن</strong></div>
@@ -741,8 +794,98 @@ function AdminPage() {
   );
 }
 
+const DESIGN_PREVIEW_USERS = {
+  shipper: { role: 'shipper_admin', tenantId: 'preview-tenant', organizationId: 'preview-shipper', userId: 'preview-shipper-admin' },
+  'company-x': { role: 'company_x_owner', tenantId: 'preview-tenant', organizationId: 'preview-company-x', userId: 'preview-company-x-owner' },
+  'company-y': { role: 'company_y_owner', tenantId: 'preview-tenant', organizationId: 'preview-company-y', userId: 'preview-company-y-owner' },
+  driver: { role: 'driver', tenantId: 'preview-tenant', organizationId: 'preview-company-y', userId: 'preview-driver' },
+  agent: { role: 'agent_z', tenantId: 'preview-tenant', organizationId: 'preview-agent-z', userId: 'preview-agent' },
+  admin: { role: 'super_admin', tenantId: 'preview-tenant', organizationId: 'preview-platform', userId: 'preview-admin' }
+};
+
+const DESIGN_PREVIEW_PANELS = [
+  { slug: 'shipper', title: 'صاحب بار', description: 'بار، RFQ، قرارداد، رهگیری، اسناد و تسویه', icon: 'cargo', meta: 'Shipper / Customer' },
+  { slug: 'company-x', title: 'شرکت لجستیک X', description: 'فرصت‌ها، قیمت‌گذاری، پروژه‌ها و عملیات حمل', icon: 'route', meta: 'Logistics Company X' },
+  { slug: 'company-y', title: 'شرکت حمل Y', description: 'ناوگان، راننده، تخصیص بار، سفر و مالی', icon: 'fleet', meta: 'Carrier / Company Y' },
+  { slug: 'driver', title: 'راننده', description: 'ماموریت، چک‌این، GPS، مدارک، POD و تسویه', icon: 'driver', meta: 'Driver Mobile App' },
+  { slug: 'agent', title: 'نماینده مقصد Z', description: 'تحویل، احراز مقصد، شواهد، CMR و مغایرت', icon: 'agent', meta: 'Destination Agent' },
+  { slug: 'admin', title: 'حاکمیت پلتفرم', description: 'KYC، ریسک، حسابرسی، امنیت و کنترل بازار', icon: 'shield', meta: 'Admin / Governance' }
+];
+
+const DESIGN_PREVIEW_PUBLIC_SURFACES = [
+  { href: '/app', title: 'انتخاب نوع حساب', description: 'صفحه شروع عمومی', icon: 'home' },
+  { href: '/driver-login', title: 'ورود راننده', description: 'ورود به اپ عملیاتی', icon: 'driver' },
+  { href: '/carrier-login', title: 'ورود شرکت حمل', description: 'ورود به پنل شرکت حمل‌ونقل', icon: 'fleet' },
+  { href: '/app/driver', title: 'ثبت‌نام راننده', description: 'فرآیند درخواست عضویت', icon: 'user' },
+  { href: '/app/careers', title: 'ثبت‌نام شرکت حمل', description: 'درخواست عضویت سازمانی', icon: 'organization' },
+  { href: '/admin/v2', title: 'ورود مدیریت', description: 'درگاه امن راهبری', icon: 'shield' }
+];
+
+function DesignPreviewHub() {
+  return (
+    <div className="preview-hub" dir="rtl">
+      <header className="preview-hub__header">
+        <ProductLogo subtitle="مرکز بازبینی تجربه محصول" />
+        <span><Icon name="audit" size={16} /> فقط محیط توسعه</span>
+      </header>
+      <main className="preview-hub__main">
+        <section className="preview-hub__hero">
+          <div>
+            <span className="eyebrow"><Icon name="route" size={16} /> GOMROK ROUTE PULSE</span>
+            <h1>تمام تجربه محصول،<br /><em>بدون ثبت‌نام.</em></h1>
+            <p>هر شش پنل عملیاتی و همه مسیرهای عمومی را از همین صفحه باز کن. این لینک‌ها فقط در حالت توسعه فعال هستند.</p>
+          </div>
+          <OnboardingImage role="carrier" className="preview-hub__illustration preview-hub__illustration--photo" decorative loading="lazy" />
+        </section>
+
+        <section className="preview-hub__section" aria-labelledby="panel-preview-title">
+          <div className="preview-hub__section-heading">
+            <div><span>۶ فضای کاری</span><h2 id="panel-preview-title">پنل‌های عملیاتی</h2></div>
+            <small>داده نمایشی محلی · بدون دور زدن مجوزهای تولید</small>
+          </div>
+          <div className="preview-hub__panel-grid">
+            {DESIGN_PREVIEW_PANELS.map((panel, index) => (
+              <a className="preview-hub__panel" href={`/app/preview/${panel.slug}`} key={panel.slug}>
+                <span className="preview-hub__index">۰{index + 1}</span>
+                <span className="preview-hub__panel-icon"><Icon name={panel.icon} size={25} /></span>
+                <span className="preview-hub__panel-copy"><small dir="ltr">{panel.meta}</small><strong>{panel.title}</strong><em>{panel.description}</em></span>
+                <span className="preview-hub__open" aria-hidden="true"><Icon name="arrow" size={18} /></span>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section className="preview-hub__section preview-hub__section--public" aria-labelledby="public-preview-title">
+          <div className="preview-hub__section-heading"><div><span>ورود و عضویت</span><h2 id="public-preview-title">صفحه‌های عمومی</h2></div></div>
+          <div className="preview-hub__public-grid">
+            {DESIGN_PREVIEW_PUBLIC_SURFACES.map((surface) => (
+              <a className="preview-hub__public-card" href={surface.href} key={surface.href}>
+                <span><Icon name={surface.icon} size={21} /></span>
+                <strong>{surface.title}</strong>
+                <small>{surface.description}</small>
+                <Icon name="arrow" size={16} />
+              </a>
+            ))}
+          </div>
+        </section>
+      </main>
+      <footer className="preview-hub__footer"><span>GOMROK DESIGN SYSTEM 2026</span><small>RTL · Responsive · Accessible</small></footer>
+    </div>
+  );
+}
+
+function readDesignPreviewRole(pathname) {
+  if (!import.meta.env.DEV) return '';
+  const normalizedPath = pathname.replace(/\/+$/, '') || '/';
+  const match = normalizedPath.match(/^\/app\/preview\/([^/]+)$/);
+  return match && DESIGN_PREVIEW_USERS[match[1]] ? match[1] : '';
+}
+
 export default function App() {
   const initialPath = window.location.pathname;
+  const normalizedInitialPath = initialPath.replace(/\/+$/, '') || '/';
+  const isDesignPreviewHub = import.meta.env.DEV && normalizedInitialPath === '/app/preview';
+  const designPreviewRole = readDesignPreviewRole(initialPath);
   const isCarrierRegisterPath = ['/app/careers', '/app/careers/', '/carrier-register'].includes(initialPath);
   const isDriverRegisterPath = ['/app/driver', '/app/driver/', '/driver-register'].includes(initialPath);
   const isAdminPath = ['/admin/v2', '/admin/v2/', '/app/admin/v2', '/app/admin/v2/'].includes(initialPath);
@@ -754,6 +897,12 @@ export default function App() {
   const [token, setToken] = useState(() => sessionStorage.getItem('gomrok-session-token') || '');
   const [registration, setRegistration] = useState(null);
 
+  if (isDesignPreviewHub) return <DesignPreviewHub />;
+
+  if (designPreviewRole) {
+    return <PlatformWorkspace user={DESIGN_PREVIEW_USERS[designPreviewRole]} token="local-design-preview" apiUrl="" onLogout={() => { window.history.pushState({}, '', '/app'); window.location.reload(); }} />;
+  }
+
   const navigateAuth = (nextPage, nextRole) => {
     const path = nextPage === 'carrier-register' ? '/app/careers' : nextPage === 'driver-register' ? '/app/driver' : nextPage === 'role-select' ? '/app' : nextRole === 'carrier' ? '/carrier-login' : '/driver-login';
     window.history.pushState({}, '', path);
@@ -764,7 +913,7 @@ export default function App() {
   if (registration) return <RegistrationSubmittedPage registration={registration} onBack={() => { setRegistration(null); navigateAuth('role-select'); }} />;
   if (user && token) return <PlatformWorkspace user={user} token={token} apiUrl={API_URL} onLogout={() => { sessionStorage.removeItem('gomrok-session-token'); sessionStorage.removeItem('gomrok-refresh-token'); sessionStorage.removeItem('gomrok-session-user'); sessionStorage.removeItem('gomrok-admin-step-up-token'); setToken(''); setUser(null); navigateAuth('login', user.role === 'carrier' ? 'carrier' : 'driver'); }} />;
   if (page === 'admin') return <AdminPage />;
-  if (page === 'role-select') return <RoleSelectionPage onDriverRegister={() => navigateAuth('driver-register', 'driver')} onCarrierRegister={() => navigateAuth('carrier-register', 'carrier')} />;
+  if (page === 'role-select') return <RoleSelectionPage onDriverLogin={() => navigateAuth('login', 'driver')} onCarrierLogin={() => navigateAuth('login', 'carrier')} />;
   if (page === 'driver-register') return <RegisterPage onBack={() => navigateAuth('role-select')} onRegistered={setRegistration} />;
   if (page === 'carrier-register') return <CarrierRegisterPage onBack={() => navigateAuth('role-select')} onRegistered={setRegistration} />;
   return (
