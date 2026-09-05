@@ -797,7 +797,7 @@ const DESIGN_PREVIEW_PANELS = [
 ];
 
 const DESIGN_PREVIEW_PUBLIC_SURFACES = [
-  { href: '/app', title: 'انتخاب نوع حساب', description: 'صفحه شروع عمومی', icon: 'home' },
+  { href: '/app', title: 'ورود اپ راننده', description: 'ورود یا ثبت‌نام از پایین صفحه', icon: 'driver' },
   { href: '/driver-login', title: 'ورود راننده', description: 'ورود به اپ عملیاتی', icon: 'driver' },
   { href: '/carrier-login', title: 'ورود شرکت حمل', description: 'ورود به پنل شرکت حمل‌ونقل', icon: 'fleet' },
   { href: '/app/driver', title: 'ثبت‌نام راننده', description: 'فرآیند درخواست عضویت', icon: 'user' },
@@ -873,7 +873,8 @@ export default function App() {
   const isCarrierRegisterPath = ['/app/careers', '/app/careers/', '/carrier-register'].includes(initialPath);
   const isDriverRegisterPath = ['/app/driver', '/app/driver/', '/driver-register'].includes(initialPath);
   const isAdminPath = ['/admin/v2', '/admin/v2/', '/app/admin/v2', '/app/admin/v2/'].includes(initialPath);
-  const initialPage = isAdminPath ? 'admin' : isCarrierRegisterPath ? 'carrier-register' : isDriverRegisterPath ? 'driver-register' : ['/carrier-login', '/driver-login'].includes(initialPath) ? 'login' : 'role-select';
+  const isRoleSelectionPath = ['/app/select-role', '/select-role'].includes(normalizedInitialPath);
+  const initialPage = isAdminPath ? 'admin' : isCarrierRegisterPath ? 'carrier-register' : isDriverRegisterPath ? 'driver-register' : isRoleSelectionPath ? 'role-select' : normalizedInitialPath === '/app' || ['/carrier-login', '/driver-login'].includes(initialPath) ? 'login' : 'role-select';
   const initialRole = initialPath.startsWith('/carrier') || initialPath === '/app/careers' ? 'carrier' : 'driver';
   const [page, setPage] = useState(initialPage);
   const [loginRole, setLoginRole] = useState(initialRole);
@@ -888,7 +889,7 @@ export default function App() {
   }
 
   const navigateAuth = (nextPage, nextRole) => {
-    const path = nextPage === 'carrier-register' ? '/app/careers' : nextPage === 'driver-register' ? '/app/driver' : nextPage === 'role-select' ? '/app' : nextRole === 'carrier' ? '/carrier-login' : '/driver-login';
+    const path = nextPage === 'carrier-register' ? '/app/careers' : nextPage === 'driver-register' ? '/app/driver' : nextPage === 'role-select' ? '/app/select-role' : nextRole === 'carrier' ? '/carrier-login' : '/driver-login';
     window.history.pushState({}, '', path);
     if (nextRole) setLoginRole(nextRole);
     setPage(nextPage);
