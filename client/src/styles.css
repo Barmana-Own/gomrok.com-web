@@ -86,9 +86,6 @@ button { border: 0; cursor: pointer; }
 .progress { display: flex; align-items: center; gap: 7px; margin-top: 15px; color: #a4b0bf; font-size: 8px; }
 .progress i { width: 26px; height: 1px; background: #dce5f2; }
 .progress__active { color: #1e56c9; font-weight: 700; }
-.role-switch { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 4px; background: #f0f5fc; border: 1px solid #e2eaf5; border-radius: 13px; }
-.role-switch button { min-height: 32px; color: #8797aa; background: transparent; border-radius: 9px; font-size: 9px; transition: color .16s ease, background .16s ease, box-shadow .16s ease; }
-.role-switch button.role-switch__active { color: #fff; background: linear-gradient(100deg, #1e56c9, #3f83f3); box-shadow: 0 6px 13px rgba(47, 111, 237, .17); font-weight: 800; }
 .eyebrow { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; color: #1e56c9; font-size: 8px; font-weight: 700; }
 .eyebrow::before { width: 17px; height: 2px; background: currentColor; content: ''; }
 h1 { margin: 7px 0 0; color: #173145; font-size: 24px; line-height: 1.35; letter-spacing: -.8px; }
@@ -394,16 +391,6 @@ h1 { margin: 7px 0 0; color: #173145; font-size: 24px; line-height: 1.35; letter
 }
 .register-header__title strong { font-size: 17px; letter-spacing: -.3px; }
 .register-header__title small { color: rgba(225, 237, 255, .66); font-size: 8px; }
-.register-header__back, .register-header__icon {
-  display: grid;
-  z-index: 1;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-}
-.register-header__back { position: absolute; top: 16px; left: 16px; color: #fff; background: transparent; font-size: 28px; font-weight: 300; line-height: 1; }
-.register-header__icon { position: absolute; top: 15px; right: 16px; background: rgba(103, 160, 235, .13); border: 1px solid rgba(181, 211, 255, .36); border-radius: 15px; }
-.register-header__icon img { display: block; width: 40px; height: 40px; object-fit: contain; }
 .register-steps { position: absolute; right: 18px; bottom: 17px; left: 18px; z-index: 1; display: flex; align-items: flex-start; gap: 7px; direction: ltr; }
 .register-step { display: grid; flex: 0 0 auto; justify-items: center; gap: 6px; min-width: 68px; color: rgba(226, 236, 249, .72); font-size: 8px; text-align: center; }
 .register-step b { display: grid; width: 21px; height: 21px; color: rgba(240, 247, 255, .8); background: transparent; border: 1.5px solid rgba(226, 236, 249, .78); border-radius: 50%; place-items: center; font-size: 10px; font-weight: 500; }

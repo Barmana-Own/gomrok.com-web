@@ -247,19 +247,13 @@ function RoleSelectionPage({ onDriverLogin, onCarrierLogin }) {
   );
 }
 
-function LoginPage({ initialRole = 'driver', onRoleChange, onDriverRegister, onCarrierRegister, onLoggedIn }) {
-  const [role, setRole] = useState(initialRole);
+function LoginPage({ initialRole = 'driver', onDriverRegister, onCarrierRegister, onLoggedIn }) {
+  const role = initialRole === 'carrier' ? 'carrier' : 'driver';
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const isCarrier = role === 'carrier';
-
-  const changeRole = (nextRole) => {
-    setRole(nextRole);
-    setNotice('');
-    onRoleChange?.(nextRole);
-  };
 
   const submit = async (event) => {
     event.preventDefault();
@@ -284,10 +278,6 @@ function LoginPage({ initialRole = 'driver', onRoleChange, onDriverRegister, onC
       <div className="auth-layout">
         <AuthVisual role={isCarrier ? 'carrier' : 'driver'} />
       <main className="auth-main auth-layout__form">
-        <div className="role-switch" aria-label="انتخاب نوع حساب">
-          <button className={!isCarrier ? 'role-switch__active' : ''} type="button" onClick={() => changeRole('driver')}>راننده</button>
-          <button className={isCarrier ? 'role-switch__active' : ''} type="button" onClick={() => changeRole('carrier')}>شرکت حمل‌ونقل</button>
-        </div>
         <span className="eyebrow"><Icon name={isCarrier ? 'fleet' : 'driver'} size={16} /> {isCarrier ? 'پنل اختصاصی شرکت‌های حمل' : 'اپ عملیاتی رانندگان'}</span>
         <h1>{isCarrier ? 'خوش آمدی، شرکت حمل‌ونقل' : 'خوش آمدی، راننده'}</h1>
         <p className="lead">{isCarrier ? 'برای مدیریت ناوگان و بارها وارد حساب شرکت حمل‌ونقل شو.' : 'برای دیدن سفرها و مأموریت‌ها وارد حساب خودت شو.'}</p>
@@ -308,7 +298,7 @@ function LoginPage({ initialRole = 'driver', onRoleChange, onDriverRegister, onC
   );
 }
 
-function RegisterPage({ onBack, onRegistered }) {
+function RegisterPage({ onRegistered }) {
   const [form, setForm] = useState(emptyRegistration);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
@@ -337,7 +327,7 @@ function RegisterPage({ onBack, onRegistered }) {
 
   return (
     <div className="screen screen--register screen--driver-register">
-      <RegisterHeader role="driver" onBack={onBack} />
+      <RegisterHeader role="driver" />
       <main className="register-main">
         <RegistrationVisual role="driver" />
         <section className="register-main__form-column">
@@ -361,15 +351,13 @@ function RegisterPage({ onBack, onRegistered }) {
   );
 }
 
-function RegisterHeader({ role, onBack }) {
+function RegisterHeader({ role }) {
   const isCarrier = role === 'carrier';
-  const steps = ['اطلاعات پایه', 'بررسی اطلاعات', 'ایجاد حساب'];
+  const steps = ['اطلاعات پایه', 'آپلود مدارک', 'بررسی اطلاعات', 'ایجاد حساب'];
 
   return (
     <header className={`register-header register-header--${role}`}>
-      <button className="register-header__back" type="button" onClick={onBack} aria-label="بازگشت به انتخاب نقش"><Icon name="arrow" size={22} /></button>
       <div className="register-header__title"><strong>ثبت‌نام {isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}</strong><small>gomrok.org</small></div>
-      <span className="register-header__icon"><OnboardingImage role={isCarrier ? 'carrier' : 'driver'} decorative /></span>
       <div className="register-steps" aria-label="مراحل ثبت‌نام">
         {steps.map((step, index) => (
           <span className={`register-step${index === 0 ? ' register-step--active' : ''}`} key={step}>
@@ -379,10 +367,6 @@ function RegisterHeader({ role, onBack }) {
       </div>
     </header>
   );
-}
-
-function CarrierRegisterHeader({ onBack }) {
-  return <RegisterHeader role="carrier" onBack={onBack} />;
 }
 
 function RegistrationVisual({ role }) {
@@ -404,7 +388,7 @@ function RegistrationVisual({ role }) {
   );
 }
 
-function CarrierRegisterPage({ onBack, onRegistered }) {
+function CarrierRegisterPage({ onRegistered }) {
   const [form, setForm] = useState(emptyCarrierRegistration);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
@@ -433,7 +417,7 @@ function CarrierRegisterPage({ onBack, onRegistered }) {
 
   return (
     <div className="screen screen--register screen--carrier-register">
-      <CarrierRegisterHeader onBack={onBack} />
+      <RegisterHeader role="carrier" />
       <main className="register-main">
         <RegistrationVisual role="carrier" />
         <section className="register-main__form-column">
@@ -484,7 +468,7 @@ function MaintenancePage({ user, onLogout }) {
   );
 }
 
-function RegistrationSubmittedPage({ registration, onBack }) {
+function RegistrationSubmittedPage({ registration, onContinue }) {
   const isCarrier = registration?.role === 'carrier';
   const title = 'از ثبت‌نام شما متشکریم';
   const name = isCarrier ? registration?.businessName : `${registration?.firstName || ''} ${registration?.lastName || ''}`.trim();
@@ -504,7 +488,7 @@ function RegistrationSubmittedPage({ registration, onBack }) {
           <div className="maintenance-card__row"><i className="maintenance-card__dot" /><span>سامانه در حال توسعه است</span><small>به‌زودی</small></div>
         </section>
 
-        <button className="primary-button maintenance-button" type="button" onClick={onBack}>بازگشت به انتخاب نقش</button>
+        <button className="primary-button maintenance-button" type="button" onClick={onContinue}>ورود به حساب {isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}</button>
         <p className="maintenance-note">شماره پیگیری درخواست: #{registration?.id || '—'}</p>
       </main>
     </div>
@@ -910,16 +894,15 @@ export default function App() {
     setPage(nextPage);
   };
 
-  if (registration) return <RegistrationSubmittedPage registration={registration} onBack={() => { setRegistration(null); navigateAuth('role-select'); }} />;
+  if (registration) return <RegistrationSubmittedPage registration={registration} onContinue={() => { setRegistration(null); navigateAuth('login', registration.role === 'carrier' ? 'carrier' : 'driver'); }} />;
   if (user && token) return <PlatformWorkspace user={user} token={token} apiUrl={API_URL} onLogout={() => { sessionStorage.removeItem('gomrok-session-token'); sessionStorage.removeItem('gomrok-refresh-token'); sessionStorage.removeItem('gomrok-session-user'); sessionStorage.removeItem('gomrok-admin-step-up-token'); setToken(''); setUser(null); navigateAuth('login', user.role === 'carrier' ? 'carrier' : 'driver'); }} />;
   if (page === 'admin') return <AdminPage />;
   if (page === 'role-select') return <RoleSelectionPage onDriverLogin={() => navigateAuth('login', 'driver')} onCarrierLogin={() => navigateAuth('login', 'carrier')} />;
-  if (page === 'driver-register') return <RegisterPage onBack={() => navigateAuth('role-select')} onRegistered={setRegistration} />;
-  if (page === 'carrier-register') return <CarrierRegisterPage onBack={() => navigateAuth('role-select')} onRegistered={setRegistration} />;
+  if (page === 'driver-register') return <RegisterPage onRegistered={setRegistration} />;
+  if (page === 'carrier-register') return <CarrierRegisterPage onRegistered={setRegistration} />;
   return (
     <LoginPage
       initialRole={loginRole}
-      onRoleChange={(nextRole) => navigateAuth('login', nextRole)}
       onDriverRegister={() => navigateAuth('driver-register', 'driver')}
       onCarrierRegister={() => navigateAuth('carrier-register', 'carrier')}
       onLoggedIn={(nextUser, nextToken, nextRefreshToken) => { sessionStorage.setItem('gomrok-session-token', nextToken); sessionStorage.setItem('gomrok-session-user', JSON.stringify(nextUser)); if (nextRefreshToken) sessionStorage.setItem('gomrok-refresh-token', nextRefreshToken); setToken(nextToken); setUser(nextUser); }}
