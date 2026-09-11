@@ -2,6 +2,7 @@ openapi: 3.0.3
 info:
   title: GomrokDotCom Shared Platform API
   version: 1.0.0-pre
+  x-contract-delta-version: '1.4'
   description: Server-enforced contract for the six Gomrok product surfaces.
 servers:
   - url: /api
@@ -25,6 +26,99 @@ paths:
       responses:
         '200':
           description: Rotated session tokens
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Context session generation changed (CTX-004)
+  /platform/me/contexts:
+    get:
+      summary: List only the authenticated user's active operating contexts
+      operationId: listOwnOperatingContexts
+      description: |-
+        This is the only read available to a bootstrap session. A context-bound
+        session must also send X-Operating-Context. No business resource is
+        available until a context is selected.
+      parameters:
+        - $ref: '#/components/parameters/OperatingContextOptional'
+      responses:
+        '200':
+          description: Safe context-selection projection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperatingContextList'
+        '400':
+          $ref: '#/components/responses/InvalidOperatingContext'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/ContextSessionConflict'
+        '503':
+          $ref: '#/components/responses/ContextSessionsUnavailable'
+  /auth/context/select:
+    post:
+      summary: Consume a bootstrap session and select its first active context
+      operationId: selectOperatingContext
+      description: The supplied refresh token is rotated atomically with the session generation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextTransitionInput'
+      responses:
+        '200':
+          description: Context-bound access and rotated refresh tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextSessionTokens'
+        '400':
+          $ref: '#/components/responses/InvalidOperatingContext'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/ContextSessionConflict'
+        '503':
+          $ref: '#/components/responses/ContextSessionsUnavailable'
+  /auth/context/switch:
+    post:
+      summary: Switch a context-bound session to another authorized context
+      operationId: switchOperatingContext
+      description: |-
+        The current context is bound by X-Operating-Context; targetContextId is
+        only the requested destination. A successful switch increments the
+        session generation, rotates refresh credentials, and invalidates old
+        access/refresh generations.
+      parameters:
+        - $ref: '#/components/parameters/OperatingContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContextTransitionInput'
+      responses:
+        '200':
+          description: Switched context session and rotated credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextSessionTokens'
+        '400':
+          $ref: '#/components/responses/InvalidOperatingContext'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/ContextSessionConflict'
+        '503':
+          $ref: '#/components/responses/ContextSessionsUnavailable'
   /auth/change-password:
     post:
       summary: Change the current Driver or Company Y password and revoke refresh sessions
@@ -48,6 +142,8 @@ paths:
     get:
       summary: Return the authenticated membership scope
       operationId: getPlatformContext
+      parameters:
+        - $ref: '#/components/parameters/OperatingContextOptional'
       responses:
         '200':
           description: Tenant, organization, role and permission scope
@@ -95,6 +191,8 @@ paths:
       responses:
         '201':
           description: Draft case created
+        '400':
+          $ref: '#/components/responses/InvalidIdempotencyHeader'
         '403':
           $ref: '#/components/responses/Forbidden'
   /platform/cases/{caseId}/publish-rfq:
@@ -147,9 +245,16 @@ paths:
       operationId: getRfq
       parameters:
         - $ref: '#/components/parameters/RfqId'
+        - $ref: '#/components/parameters/OperatingContextOptional'
       responses:
         '200':
           description: RFQ read model
+        '400':
+          $ref: '#/components/responses/InvalidOperatingContext'
+        '403':
+          $ref: '#/components/responses/ContextCrossScope'
+        '404':
+          description: RFQ does not exist or is not visible to the active operating context
   /platform/rfqs:
     get:
       summary: List Company Y invitation-scoped RFQ2 books without competitor bids
@@ -159,7 +264,13 @@ paths:
           in: query
           required: false
           schema: { type: string, enum: [RFQ2], default: RFQ2 }
-      responses: { '200': { description: Invitation-scoped RFQ2 read model } }
+        - $ref: '#/components/parameters/OperatingContextOptional'
+      responses:
+        '200': { description: Invitation-scoped RFQ2 read model }
+        '400':
+          $ref: '#/components/responses/InvalidOperatingContext'
+        '403':
+          $ref: '#/components/responses/ContextCrossScope'
   /platform/rfqs/{rfqId}/quotes:
     post:
       summary: Submit a sealed quote
@@ -180,8 +291,15 @@ paths:
     get:
       summary: Read Company X internal pricing for its own Market A quote
       operationId: getCompanyXQuotePricing
-      parameters: [{ $ref: '#/components/parameters/RfqId' }]
-      responses: { '200': { description: X-only pricing and margin read model } }
+      parameters:
+        - $ref: '#/components/parameters/RfqId'
+        - $ref: '#/components/parameters/OperatingContextOptional'
+      responses:
+        '200': { description: X-only pricing and margin read model }
+        '400':
+          $ref: '#/components/responses/InvalidOperatingContext'
+        '403':
+          $ref: '#/components/responses/ContextConfidentialRate'
   /platform/rfqs/{rfqId}/award:
     post:
       summary: Human award with reason; direct Company X to Driver award is rejected
@@ -682,7 +800,7 @@ paths:
               $ref: '#/components/schemas/AgentDeliveryVerification'
       responses:
         '201': { description: Delivery verification appended to the evidence chain }
-        '422': { description: Recipient, authority or location mismatch requires controlled handling }
+        '422': { description: 'Recipient, authority or location mismatch: controlled handling is required' }
   /platform/agent/trips/{tripId}/evidence:
     post:
       summary: Append destination photo, signature, stamp or receipt evidence as a versioned document
@@ -755,7 +873,7 @@ paths:
     get:
       summary: Driver-only mobile dashboard
       operationId: getDriverDashboard
-      responses: { '200': { description: Assigned trips, opportunities and own relationship metrics } }
+      responses: { '200': { description: 'Assigned trips, opportunities, and own-relationship metrics' } }
   /platform/driver/profile:
     get:
       summary: Read the authenticated driver's own profile, coverage, vehicles and documents
@@ -954,7 +1072,17 @@ paths:
     post:
       summary: Record a human qualification decision with reason and audit
       operationId: decideAdminQualification
-      parameters: [{ $ref: '#/components/parameters/PurposeScope' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: { type: string, enum: [organization, membership] }
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+        - $ref: '#/components/parameters/PurposeScope'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -1211,10 +1339,42 @@ components:
       required: true
       schema: { type: integer, minimum: 1 }
     IdempotencyKey:
-      name: X-Idempotency-Key
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |-
+        Canonical idempotency header. Operations referencing this parameter require
+        either Idempotency-Key or the accepted legacy alias X-Idempotency-Key. When
+        both are sent, their values must be identical; otherwise the server returns
+        HTTP 400 with code IDEM-400. Repeated, blank, comma-bearing, non-ASCII,
+        whitespace-bearing, or longer-than-128 values are invalid. Header names are
+        case-insensitive and key values are compared as case-sensitive opaque text.
+      x-required-one-of:
+        - Idempotency-Key
+        - X-Idempotency-Key
+      x-legacy-alias: X-Idempotency-Key
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    OperatingContext:
+      name: X-Operating-Context
       in: header
       required: true
-      schema: { type: string, maxLength: 128 }
+      description: |-
+        Exact opaque identifier of the active operating context. It must match
+        both the signed access-token claim and the current server-side session
+        generation. Missing, repeated, malformed, or mismatched values return
+        HTTP 400 with CTX-001. Header names are case-insensitive; values are
+        case-sensitive and are never selected from body or query parameters.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: '^[\x21-\x2B\x2D-\x7E]+$'
+    OperatingContextOptional:
+      name: X-Operating-Context
+      in: header
+      required: false
+      description: Required for context-bound sessions and omitted by a bootstrap selection session.
+      schema: { type: string, minLength: 1, maxLength: 128 }
     PurposeScope:
       name: X-Purpose-Scope
       in: header
@@ -1256,13 +1416,64 @@ components:
       required: true
       schema: { type: integer, minimum: 1 }
   responses:
+    Unauthorized:
+      description: Authentication credentials are missing, invalid, expired, or revoked (AUTH-401)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthError'
+    InvalidIdempotencyHeader:
+      description: The idempotency header is malformed, repeated, or conflicts with its alias (IDEM-400)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
     Forbidden:
       description: Authorization, ABAC, ownership or relationship boundary failed
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetails'
+    InvalidOperatingContext:
+      description: Missing, malformed, repeated, or mismatched operating-context header (CTX-001)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ContextCrossScope:
+      description: The RFQ object belongs to a market role outside the active operating context (CTX-002)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ContextConfidentialRate:
+      description: A carrier context attempted to read confidential forwarder pricing (CTX-003)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ContextSessionConflict:
+      description: The context session generation or active context changed (CTX-004)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ContextSessionsUnavailable:
+      description: Context sessions remain disabled until the reviewed M1/M2 rollout is complete (CTX-503)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
   schemas:
+    AuthError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, example: AUTH-401 }
+        message: { type: string }
     ProblemDetails:
       type: object
       required: [type, title, status, code, detail, correlationId]
@@ -1280,7 +1491,62 @@ components:
         organizationId: { type: string }
         membershipId: { type: integer }
         role: { type: string }
+        contextId: { type: string, nullable: true }
+        contextType: { type: string, enum: [FWD, CAR], nullable: true }
+        contextEvidenceLevel: { type: string, enum: [E0, E1, E2, E3], nullable: true }
+        sessionGeneration: { type: integer, minimum: 0, nullable: true }
         permissions: { type: array, items: { type: string } }
+    OperatingContextSummary:
+      type: object
+      required: [contextId, contextType, organizationId, membershipId, role]
+      properties:
+        contextId: { type: string, maxLength: 128 }
+        contextType: { type: string, enum: [FWD, CAR] }
+        organizationId: { type: string }
+        membershipId: { type: integer, minimum: 1 }
+        role: { type: string }
+        displayColor: { type: string, nullable: true, pattern: '^#[0-9A-Fa-f]{6}$' }
+        evidenceLevel: { type: string, enum: [E0, E1, E2, E3], nullable: true }
+    OperatingContextList:
+      type: object
+      required: [session, contexts]
+      properties:
+        session:
+          type: object
+          required: [mode, generation]
+          properties:
+            mode: { type: string, enum: [bootstrap, context] }
+            generation: { type: integer, minimum: 0 }
+            activeContextId: { type: string, nullable: true }
+        contexts:
+          type: array
+          items: { $ref: '#/components/schemas/OperatingContextSummary' }
+    ContextTransitionInput:
+      type: object
+      additionalProperties: false
+      required: [targetContextId, refreshToken]
+      properties:
+        targetContextId: { type: string, minLength: 1, maxLength: 128 }
+        refreshToken: { type: string, minLength: 32, maxLength: 512 }
+    ContextSessionTokens:
+      type: object
+      required: [token, refreshToken, session]
+      properties:
+        token: { type: string }
+        refreshToken: { type: string }
+        session:
+          type: object
+          required: [mode, generation, contextSelectionRequired, expiresAt]
+          properties:
+            mode: { type: string, enum: [bootstrap, context] }
+            generation: { type: integer, minimum: 0 }
+            contextSelectionRequired: { type: boolean }
+            activeContext:
+              type: object
+              nullable: true
+              allOf:
+                - $ref: '#/components/schemas/OperatingContextSummary'
+            expiresAt: { type: string, format: date-time }
     AdminQualificationDecision:
       type: object
       required: [decision, reason]
@@ -1350,7 +1616,7 @@ components:
       type: object
       required: [amount, currency]
       properties:
-        amount: { type: number, exclusiveMinimum: 0 }
+        amount: { type: number, minimum: 0, exclusiveMinimum: true }
         currency: { type: string, minLength: 3, maxLength: 3 }
         terms: { type: object }
         state: { type: string, enum: [DRAFT, SUBMITTED], default: SUBMITTED }

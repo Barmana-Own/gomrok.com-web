@@ -2,8 +2,8 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 import { pool } from '../db.js';
-import { platformAuth, idempotencyKey } from '../security/platform-auth.js';
-import { JWT_SECRET, STEP_UP_SECRET } from '../config.js';
+import { platformAuth, resolveIdempotencyKey } from '../security/platform-auth.js';
+import { JWT_SECRET, OPERATING_CONTEXT_SESSIONS_ENABLED, STEP_UP_SECRET } from '../config.js';
 import { publishPlatformEvent } from '../realtime/broker.js';
 import {
   ADMIN_ROLES,
@@ -14,8 +14,10 @@ import {
   normalizeRole
 } from '../../../shared/contract.js';
 import { DomainError, parseJson } from '../domain/workflow.js';
+import { createOperatingContextSessionService } from '../services/operating-context-session.service.js';
 
 const router = Router();
+const operatingContextSessionService = createOperatingContextSessionService(pool);
 const jwtSecret = JWT_SECRET;
 const stepUpSecret = STEP_UP_SECRET;
 const PURPOSE_ROLES = [ROLES.SUPER_ADMIN, ROLES.MARKETPLACE_ADMIN];
@@ -33,6 +35,19 @@ const RULEPACK_TRANSITIONS = Object.freeze({
   SUPERSEDED: ['ARCHIVED'],
   ARCHIVED: []
 });
+
+async function revokeUserSessions(tenantId, userId) {
+  if (OPERATING_CONTEXT_SESSIONS_ENABLED) {
+    return operatingContextSessionService.revokeUserSessions({ tenantId, userId });
+  }
+  const [result] = await pool.execute(
+    `UPDATE platform_refresh_tokens
+        SET revoked_at = NOW()
+      WHERE tenant_id = ? AND user_id = ? AND revoked_at IS NULL`,
+    [tenantId, userId]
+  );
+  return { revokedRefreshTokens: Number(result.affectedRows || 0), revokedSessions: 0 };
+}
 const ROLE_CASE_TYPES = Object.freeze({
   [ROLES.SUPER_ADMIN]: CASE_TYPES,
   [ROLES.MARKETPLACE_ADMIN]: CASE_TYPES,
@@ -245,8 +260,13 @@ async function domainEvent(request, { eventName, entityType, entityId = null, pa
 }
 
 async function runWrite(request, response, handler, { requireKey = true } = {}) {
-  const key = idempotencyKey(request);
-  if (requireKey && !key) return problem(response, new DomainError(ERROR_CODES.STEP_UP_REQUIRED, 'برای این عملیات حساس X-Idempotency-Key لازم است.', 428), request);
+  let key;
+  try {
+    key = resolveIdempotencyKey(request);
+  } catch (error) {
+    return problem(response, error, request);
+  }
+  if (requireKey && !key) return problem(response, new DomainError(ERROR_CODES.STEP_UP_REQUIRED, 'برای این عملیات حساس Idempotency-Key یا X-Idempotency-Key لازم است.', 428), request);
   if (key && request.actor.userId) {
     const [previousRows] = await pool.execute(
       `SELECT status_code, response_json FROM platform_idempotency_keys
@@ -426,9 +446,20 @@ router.post('/users/:userId/sessions/revoke', platformAuth({ roles: [ROLES.SUPER
     const userId = parseId(request.params.userId, 'شناسه کاربر');
     const [users] = await pool.execute(`SELECT id FROM platform_users WHERE id = ? AND tenant_id = ? LIMIT 1`, [userId, request.actor.tenantId]);
     if (!users[0]) throw new DomainError('IAM-404', 'کاربر در Tenant جاری پیدا نشد.', 404);
-    const [result] = await pool.execute(`UPDATE platform_refresh_tokens SET revoked_at = NOW() WHERE tenant_id = ? AND user_id = ? AND revoked_at IS NULL`, [request.actor.tenantId, userId]);
-    await domainEvent(request, { eventName: 'SecurityIncidentOpened', entityType: 'platform_user_session', entityId: userId, payload: { action: 'SESSION_REVOKE', revokedCount: result.affectedRows } });
-    return jsonResponse({ message: 'نشست‌های فعال کاربر لغو شد و رویداد امنیتی ثبت شد.', userId, revokedCount: result.affectedRows });
+    const revocation = await revokeUserSessions(request.actor.tenantId, userId);
+    const revokedCount = revocation.revokedRefreshTokens;
+    await domainEvent(request, {
+      eventName: 'SecurityIncidentOpened',
+      entityType: 'platform_user_session',
+      entityId: userId,
+      payload: { action: 'SESSION_REVOKE', revokedCount, revokedContextSessions: revocation.revokedSessions }
+    });
+    return jsonResponse({
+      message: 'نشست‌های فعال کاربر لغو شد و رویداد امنیتی ثبت شد.',
+      userId,
+      revokedCount,
+      revokedContextSessions: revocation.revokedSessions
+    });
   });
 });
 
@@ -444,7 +475,9 @@ router.patch('/memberships/:membershipId/status', platformAuth({ roles: [ROLES.S
     if (!item) throw new DomainError('IAM-404', 'عضویت پیدا نشد.', 404);
     assertNotOwnOrganization(request, item.organization_id);
     await pool.execute(`UPDATE organization_memberships SET status = ? WHERE id = ? AND tenant_id = ?`, [status, membershipId, request.actor.tenantId]);
-    if (status !== 'active') await pool.execute(`UPDATE platform_refresh_tokens SET revoked_at = NOW() WHERE tenant_id = ? AND user_id = ? AND revoked_at IS NULL`, [request.actor.tenantId, item.user_id]);
+    if (status !== 'active') {
+      await revokeUserSessions(request.actor.tenantId, item.user_id);
+    }
     await domainEvent(request, { eventName: 'SecurityIncidentOpened', entityType: 'organization_membership', entityId: membershipId, payload: { action: 'MEMBERSHIP_STATUS_CHANGED', status, userId: item.user_id, organizationId: item.organization_id } });
     return jsonResponse({ message: 'وضعیت عضویت به‌روزرسانی و حسابرسی شد.', membershipId, status });
   });

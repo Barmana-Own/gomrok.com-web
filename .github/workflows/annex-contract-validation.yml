@@ -1,0 +1,44 @@
+name: Annex contract validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "codex/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.20.0"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Validate OpenAPI contract
+        run: npm run api:validate
+
+      - name: Run server tests
+        run: npm test
+
+      - name: Build client
+        run: npm run build
+
+      - name: Check server syntax
+        shell: bash
+        run: |
+          node --check server/src/app.js
+          node --check server/src/routes/platform.routes.js
+          node --check server/src/routes/admin.routes.js

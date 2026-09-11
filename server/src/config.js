@@ -31,3 +31,4 @@ export const STEP_UP_SECRET = configuredStepUpSecret || randomBytes(48).toString
 export const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || 'admin').trim() || 'admin';
 export const ADMIN_PASSWORD = configuredAdminPassword || null;
 export const IS_PRODUCTION = nodeEnv === 'production';
+export const OPERATING_CONTEXT_SESSIONS_ENABLED = process.env.OPERATING_CONTEXT_SESSIONS_ENABLED === 'true';

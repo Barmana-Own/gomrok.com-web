@@ -53,8 +53,8 @@
     "console": "PASS: no error or warning entries",
     "dockerComposeConfig": "PASS",
     "productionBaseAssetSmoke": "PASS: /app/ hashed JavaScript served as text/javascript",
-    "liveDatabaseMigration": "NOT_RUN: no schema change and no disposable database credentials",
-    "externalDeployment": "NOT_PERFORMED"
+    "liveDatabaseMigration": "PASS: authorized server migration completed successfully",
+    "externalDeployment": "PASS: frontend and backend deployed to the active IIS release and live smoke checks passed"
   },
   "reworkHistory": [
     "Reset legacy Driver/Admin brand selectors that clipped the new ProductLogo.",
@@ -67,9 +67,10 @@
     "Changed public driver and carrier role cards to enter the matching login page first; kept registration reachable through each login page's registration CTA.",
     "Removed example placeholder text from driver and carrier registration inputs and eliminated the nested click-focus rectangle while keeping labels and icons clear.",
     "Made the welcome header's RTL left/right alignment explicit and kept the security status pill visible beside the logo on narrow screens.",
-    "Replaced the previous user-facing Persian carrier terminology with شرکت حمل‌ونقل across public auth/registration, account, admin and registration feedback surfaces without changing carrier role or API identifiers."
+    "Replaced the previous user-facing Persian carrier terminology with شرکت حمل‌ونقل across public auth/registration, account, admin and registration feedback surfaces without changing carrier role or API identifiers.",
+    "Published the current frontend to the active IIS release and published the backend source with the 30-day refresh-token endpoint, preserving server configuration and retaining rollback backups."
   ],
   "nextStage": null,
   "workflowStatus": "COMPLETE",
-  "updatedAt": "2026-09-01"
+  "updatedAt": "2026-09-05"
 }

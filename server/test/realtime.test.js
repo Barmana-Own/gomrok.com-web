@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { publishPlatformEvent, subscribeRealtime, realtimeStats } from '../src/realtime/broker.js';
+import {
+  invalidateRealtimeSession,
+  publishPlatformEvent,
+  subscribeRealtime,
+  realtimeStats
+} from '../src/realtime/broker.js';
 
 test('realtime broker filters events by tenant and recipient organization', () => {
   const first = [];
@@ -58,4 +63,31 @@ test('realtime broker applies document, location and settlement permission gates
 
   stopDocumentIssuer();
   stopCarrierOwner();
+});
+
+test('context generation switch closes only stale realtime subscriptions for that session', () => {
+  let staleClosed = 0;
+  let currentClosed = 0;
+  const stopStale = subscribeRealtime({
+    tenantId: 'tenant-e',
+    organizationId: 'org-e',
+    userId: 11,
+    role: 'company_y_owner',
+    sessionId: 'session-e',
+    sessionGeneration: 2
+  }, () => {}, () => { staleClosed += 1; });
+  const stopCurrent = subscribeRealtime({
+    tenantId: 'tenant-e',
+    organizationId: 'org-e',
+    userId: 11,
+    role: 'company_x_owner',
+    sessionId: 'session-e',
+    sessionGeneration: 3
+  }, () => {}, () => { currentClosed += 1; });
+
+  assert.equal(invalidateRealtimeSession('session-e', 3), 1);
+  assert.equal(staleClosed, 1);
+  assert.equal(currentClosed, 0);
+  stopStale();
+  stopCurrent();
 });

@@ -5,21 +5,52 @@ import { Icon, ProductLogo } from './components/ProductIcon.jsx';
 const AdminGovernancePanel = lazy(() => import('./components/AdminGovernancePanel.jsx'));
 
 const APP_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+const ASSET_BASE = import.meta.env.PROD ? APP_BASE : '';
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? APP_BASE : 'http://127.0.0.1:4000');
 const onboardingVisuals = {
   driver: {
-    src: `${APP_BASE}/images/gomrok-driver-onboarding.jpg`,
+    src: `${ASSET_BASE}/images/gomrok-driver-onboarding.jpg`,
     width: 1536,
     height: 1024,
     alt: 'راننده حرفه‌ای در کنار کامیون باری در شبکه حمل‌ونقل گمرک'
   },
   carrier: {
-    src: `${APP_BASE}/images/gomrok-carrier-onboarding.jpg`,
+    src: `${ASSET_BASE}/images/gomrok-carrier-onboarding.jpg`,
     width: 1774,
     height: 887,
     alt: 'مدیر ناوگان و کامیون‌ها در پایانه عملیاتی شرکت حمل'
   }
 };
+const registrationStepVisuals = [
+  {
+    src: `${ASSET_BASE}/images/registration-steps/identity-verification.png`,
+    title: 'اطلاعات پایه',
+    caption: 'هویت و مشخصات اولیه',
+    icon: 'identity',
+    alt: 'راننده حرفه‌ای در کنار کامیون و تلفن همراه برای تأیید هویت'
+  },
+  {
+    src: `${ASSET_BASE}/images/registration-steps/document-upload.png`,
+    title: 'آپلود مدارک',
+    caption: 'مدارک خوانا و امن',
+    icon: 'upload',
+    alt: 'ثبت مدارک حمل‌ونقل روی میز کار در کنار کامیون'
+  },
+  {
+    src: `${ASSET_BASE}/images/registration-steps/profile-review.png`,
+    title: 'بررسی اطلاعات',
+    caption: 'کنترل توسط تیم عملیات',
+    icon: 'audit',
+    alt: 'بررسی اطلاعات پروفایل حمل‌ونقل توسط تیم عملیات'
+  },
+  {
+    src: `${ASSET_BASE}/images/registration-steps/account-activation.png`,
+    title: 'ایجاد حساب',
+    caption: 'شروع مسیر تأییدشده',
+    icon: 'check',
+    alt: 'کامیون آبی در حال شروع مسیر از پایانه امن'
+  }
+];
 const emptyRegistration = {
   firstName: '',
   lastName: '',
@@ -37,8 +68,53 @@ const emptyCarrierRegistration = {
   province: ''
 };
 
+const SESSION_TOKEN_KEY = 'gomrok-session-token';
+const SESSION_REFRESH_TOKEN_KEY = 'gomrok-session-refresh-token';
+const SESSION_USER_KEY = 'gomrok-session-user';
+const LOGIN_PHONE_KEYS = { driver: 'gomrok-login-phone-driver', carrier: 'gomrok-login-phone-carrier' };
+
+function readStorage(storage, key) {
+  try { return storage?.getItem(key) || ''; } catch (_error) { return ''; }
+}
+
+function writeStorage(storage, key, value) {
+  try { storage?.setItem(key, value); } catch (_error) { /* Storage may be unavailable in restricted browsers. */ }
+}
+
+function removeStorage(storage, key) {
+  try { storage?.removeItem(key); } catch (_error) { /* Storage may be unavailable in restricted browsers. */ }
+}
+
 function readSessionUser() {
-  try { return JSON.parse(sessionStorage.getItem('gomrok-session-user') || 'null'); } catch (_error) { return null; }
+  const raw = readStorage(sessionStorage, SESSION_USER_KEY) || readStorage(localStorage, SESSION_USER_KEY);
+  try { return JSON.parse(raw || 'null'); } catch (_error) { return null; }
+}
+
+function readStoredRefreshToken() {
+  return readStorage(localStorage, SESSION_REFRESH_TOKEN_KEY) || readStorage(sessionStorage, 'gomrok-refresh-token');
+}
+
+function readRememberedPhone(role) {
+  return readStorage(localStorage, LOGIN_PHONE_KEYS[role === 'carrier' ? 'carrier' : 'driver']);
+}
+
+function persistSession({ user, token, refreshToken, phone, role }) {
+  writeStorage(sessionStorage, SESSION_TOKEN_KEY, token || '');
+  writeStorage(sessionStorage, SESSION_USER_KEY, JSON.stringify(user || null));
+  removeStorage(sessionStorage, 'gomrok-refresh-token');
+  if (refreshToken) writeStorage(localStorage, SESSION_REFRESH_TOKEN_KEY, refreshToken);
+  else removeStorage(localStorage, SESSION_REFRESH_TOKEN_KEY);
+  writeStorage(localStorage, SESSION_USER_KEY, JSON.stringify(user || null));
+  if (phone && role) writeStorage(localStorage, LOGIN_PHONE_KEYS[role], phone);
+}
+
+function clearSession() {
+  removeStorage(sessionStorage, SESSION_TOKEN_KEY);
+  removeStorage(sessionStorage, 'gomrok-refresh-token');
+  removeStorage(sessionStorage, SESSION_USER_KEY);
+  removeStorage(sessionStorage, 'gomrok-admin-step-up-token');
+  removeStorage(localStorage, SESSION_REFRESH_TOKEN_KEY);
+  removeStorage(localStorage, SESSION_USER_KEY);
 }
 
 async function apiRequest(path, options = {}) {
@@ -47,7 +123,12 @@ async function apiRequest(path, options = {}) {
     ...options
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.message || 'ارتباط با سرور برقرار نشد.');
+  if (!response.ok) {
+    const error = new Error(body.message || 'ارتباط با سرور برقرار نشد.');
+    error.status = response.status;
+    error.code = body.code;
+    throw error;
+  }
   return body;
 }
 
@@ -70,7 +151,7 @@ function OnboardingImage({ role, className = '', decorative = false, loading = '
       alt={decorative ? '' : visual.alt}
       loading={loading}
       decoding="async"
-      fetchPriority={loading === 'eager' ? 'high' : 'auto'}
+      fetchpriority={loading === 'eager' ? 'high' : 'auto'}
     />
   );
 }
@@ -249,11 +330,17 @@ function RoleSelectionPage({ onDriverLogin, onCarrierLogin }) {
 
 function LoginPage({ initialRole = 'driver', onDriverRegister, onCarrierRegister, onLoggedIn }) {
   const role = initialRole === 'carrier' ? 'carrier' : 'driver';
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(() => readRememberedPhone(role));
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const isCarrier = role === 'carrier';
+
+  useEffect(() => {
+    setPhone(readRememberedPhone(role));
+    setPassword('');
+    setNotice('');
+  }, [role]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -264,7 +351,8 @@ function LoginPage({ initialRole = 'driver', onDriverRegister, onCarrierRegister
         method: 'POST',
         body: JSON.stringify({ phone, password })
       });
-      onLoggedIn(result.user, result.token, result.refreshToken);
+      writeStorage(localStorage, LOGIN_PHONE_KEYS[role], phone.trim());
+      onLoggedIn(result.user, result.token, result.refreshToken, phone.trim(), role);
     } catch (error) {
       setNotice(error.message);
     } finally {
@@ -284,7 +372,7 @@ function LoginPage({ initialRole = 'driver', onDriverRegister, onCarrierRegister
 
         <form className="auth-card" onSubmit={submit}>
           <div className="card-title"><span>ورود به حساب {isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}</span><b><Icon name="lock" size={17} /></b></div>
-          <Field label="شماره موبایل" name="phone" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="۰۹۱۲۱۲۳۴۵۶۷" inputMode="tel" autoComplete="tel" />
+          <Field label="شماره موبایل" name="phone" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="۰۹۱۲۱۲۳۴۵۶۷" inputMode="tel" autoComplete="username" />
           <Field label="رمز عبور" name="password" value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="رمز عبور خود را وارد کن" autoComplete="current-password" />
           {notice && <p className="notice notice--error">{notice}</p>}
           <button className="primary-button" type="submit" disabled={busy}>{busy ? 'در حال ورود…' : `ورود به پنل ${isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}`}</button>
@@ -302,6 +390,7 @@ function RegisterPage({ onRegistered }) {
   const [form, setForm] = useState(emptyRegistration);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [activeStep, setActiveStep] = useState(0);
 
   const update = (event) => {
     const { name, value } = event.target;
@@ -327,9 +416,9 @@ function RegisterPage({ onRegistered }) {
 
   return (
     <div className="screen screen--register screen--driver-register">
-      <RegisterHeader role="driver" />
+      <RegisterHeader role="driver" activeStep={activeStep} onStepChange={setActiveStep} />
       <main className="register-main">
-        <RegistrationVisual role="driver" />
+        <RegistrationVisual role="driver" activeStep={activeStep} />
         <section className="register-main__form-column">
         <form className="auth-card auth-card--register register-form" onSubmit={submit}>
           <div className="register-form__intro"><strong>اطلاعات راننده</strong><small>اطلاعات شما پس از بررسی ادمین به حساب کاربری تبدیل می‌شود.</small></div>
@@ -351,7 +440,7 @@ function RegisterPage({ onRegistered }) {
   );
 }
 
-function RegisterHeader({ role }) {
+function RegisterHeader({ role, activeStep = 0, onStepChange }) {
   const isCarrier = role === 'carrier';
   const steps = ['اطلاعات پایه', 'آپلود مدارک', 'بررسی اطلاعات', 'ایجاد حساب'];
 
@@ -360,30 +449,48 @@ function RegisterHeader({ role }) {
       <div className="register-header__title"><strong>ثبت‌نام {isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}</strong><small>gomrok.org</small></div>
       <div className="register-steps" aria-label="مراحل ثبت‌نام">
         {steps.map((step, index) => (
-          <span className={`register-step${index === 0 ? ' register-step--active' : ''}`} key={step}>
-            <b>{index === 0 ? <Icon name="check" size={15} /> : index + 1}</b><small>{step}</small>
-          </span>
+          <button
+            className={`register-step${index === activeStep ? ' register-step--active' : ''}`}
+            key={step}
+            type="button"
+            aria-current={index === activeStep ? 'step' : undefined}
+            aria-label={`پیش‌نمایش مرحله ${step}`}
+            onClick={() => onStepChange?.(index)}
+          >
+            <b>{index === activeStep ? <Icon name="check" size={15} /> : index + 1}</b><small>{step}</small>
+          </button>
         )).reduce((items, step, index, stepsList) => (index < stepsList.length - 1 ? [...items, step, <i key={`line-${index}`} />] : [...items, step]), [])}
       </div>
     </header>
   );
 }
 
-function RegistrationVisual({ role }) {
+function RegistrationVisual({ role, activeStep = 0 }) {
   const isCarrier = role === 'carrier';
+  const visual = registrationStepVisuals[activeStep] || registrationStepVisuals[0];
   const benefits = isCarrier
     ? ['احراز هویت سازمانی', 'فعال‌سازی فرصت‌های RFQ', 'کنترل امن ناوگان']
     : ['احراز هویت راننده', 'دسترسی امن به مأموریت‌ها', 'ثبت مدارک و تحویل'];
 
   return (
     <aside className={`register-visual register-visual--${role}`}>
-      <OnboardingImage role={role} className="register-visual__image" />
-      <div className="register-visual__content">
+      <div className="register-visual__copy">
         <span className="register-visual__eyebrow"><Icon name={isCarrier ? 'building' : 'identity'} size={17} /> ثبت‌نام تأییدمحور</span>
         <h2>{isCarrier ? 'شرکت حمل خود را به شبکه عملیاتی متصل کنید.' : 'مسیر حرفه‌ای خود را از یک حساب امن آغاز کنید.'}</h2>
         <p>{isCarrier ? 'اطلاعات سازمان، مدیر و محدوده فعالیت برای فعال‌سازی پنل بررسی می‌شود.' : 'اطلاعات پایه شما برای احراز هویت و تخصیص مأموریت‌های معتبر بررسی می‌شود.'}</p>
-        <ul>{benefits.map((benefit) => <li key={benefit}><Icon name="check" size={15} /> {benefit}</li>)}</ul>
       </div>
+      <div className="registration-step-gallery" aria-label={`تصویر مرحله ${visual.title}`}>
+        <figure className="registration-step-card registration-step-card--active" key={visual.title}>
+          <img src={visual.src} width="1664" height="940" alt={visual.alt} loading="eager" decoding="async" />
+          <span className="registration-step-card__shade" />
+          <figcaption>
+            <span className="registration-step-card__icon"><Icon name={visual.icon} size={15} /></span>
+            <span><strong>{visual.title}</strong><small>{visual.caption}</small></span>
+            <b>{String(activeStep + 1).padStart(2, '0')}</b>
+          </figcaption>
+        </figure>
+      </div>
+      <ul className="register-visual__benefits">{benefits.map((benefit) => <li key={benefit}><Icon name="check" size={15} /> {benefit}</li>)}</ul>
     </aside>
   );
 }
@@ -392,6 +499,7 @@ function CarrierRegisterPage({ onRegistered }) {
   const [form, setForm] = useState(emptyCarrierRegistration);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [activeStep, setActiveStep] = useState(0);
 
   const update = (event) => {
     const { name, value } = event.target;
@@ -417,9 +525,9 @@ function CarrierRegisterPage({ onRegistered }) {
 
   return (
     <div className="screen screen--register screen--carrier-register">
-      <RegisterHeader role="carrier" />
+      <RegisterHeader role="carrier" activeStep={activeStep} onStepChange={setActiveStep} />
       <main className="register-main">
-        <RegistrationVisual role="carrier" />
+        <RegistrationVisual role="carrier" activeStep={activeStep} />
         <section className="register-main__form-column">
         <form className="auth-card auth-card--register auth-card--carrier register-form" onSubmit={submit}>
           <div className="register-form__intro"><strong>اطلاعات شرکت حمل‌ونقل</strong><small>اطلاعات شرکت پس از بررسی ادمین به حساب تبدیل می‌شود.</small></div>
@@ -800,8 +908,10 @@ const DESIGN_PREVIEW_PUBLIC_SURFACES = [
   { href: '/app', title: 'ورود اپ راننده', description: 'ورود یا ثبت‌نام از پایین صفحه', icon: 'driver' },
   { href: '/driver-login', title: 'ورود راننده', description: 'ورود به اپ عملیاتی', icon: 'driver' },
   { href: '/carrier-login', title: 'ورود شرکت حمل', description: 'ورود به پنل شرکت حمل‌ونقل', icon: 'fleet' },
-  { href: '/app/driver', title: 'ثبت‌نام راننده', description: 'فرآیند درخواست عضویت', icon: 'user' },
-  { href: '/app/careers', title: 'ثبت‌نام شرکت حمل', description: 'درخواست عضویت سازمانی', icon: 'organization' },
+  { href: '/app/driver', title: 'ورود اپ راننده', description: 'ورود به اپ عملیاتی راننده', icon: 'driver' },
+  { href: '/app/careers', title: 'ورود شرکت حمل', description: 'ورود به پنل شرکت حمل‌ونقل', icon: 'fleet' },
+  { href: '/app/driver/register', title: 'ثبت‌نام راننده', description: 'فرآیند درخواست عضویت', icon: 'user' },
+  { href: '/app/careers/register', title: 'ثبت‌نام شرکت حمل', description: 'درخواست عضویت سازمانی', icon: 'organization' },
   { href: '/admin/v2', title: 'ورود مدیریت', description: 'درگاه امن راهبری', icon: 'shield' }
 ];
 
@@ -870,17 +980,82 @@ export default function App() {
   const normalizedInitialPath = initialPath.replace(/\/+$/, '') || '/';
   const isDesignPreviewHub = import.meta.env.DEV && normalizedInitialPath === '/app/preview';
   const designPreviewRole = readDesignPreviewRole(initialPath);
-  const isCarrierRegisterPath = ['/app/careers', '/app/careers/', '/carrier-register'].includes(initialPath);
-  const isDriverRegisterPath = ['/app/driver', '/app/driver/', '/driver-register'].includes(initialPath);
-  const isAdminPath = ['/admin/v2', '/admin/v2/', '/app/admin/v2', '/app/admin/v2/'].includes(initialPath);
+  const isCarrierRegisterPath = ['/app/careers/register', '/carrier-register'].includes(normalizedInitialPath);
+  const isDriverRegisterPath = ['/app/driver/register', '/driver-register'].includes(normalizedInitialPath);
+  const isAdminPath = ['/admin/v2', '/app/admin/v2'].includes(normalizedInitialPath);
   const isRoleSelectionPath = ['/app/select-role', '/select-role'].includes(normalizedInitialPath);
-  const initialPage = isAdminPath ? 'admin' : isCarrierRegisterPath ? 'carrier-register' : isDriverRegisterPath ? 'driver-register' : isRoleSelectionPath ? 'role-select' : normalizedInitialPath === '/app' || ['/carrier-login', '/driver-login'].includes(initialPath) ? 'login' : 'role-select';
-  const initialRole = initialPath.startsWith('/carrier') || initialPath === '/app/careers' ? 'carrier' : 'driver';
+  const isLoginPath = ['/app', '/app/driver', '/app/careers', '/driver-login', '/carrier-login'].includes(normalizedInitialPath);
+  const initialPage = isAdminPath ? 'admin' : isCarrierRegisterPath ? 'carrier-register' : isDriverRegisterPath ? 'driver-register' : isRoleSelectionPath ? 'role-select' : isLoginPath ? 'login' : 'role-select';
+  const initialRole = normalizedInitialPath.startsWith('/carrier') || normalizedInitialPath.startsWith('/app/careers') ? 'carrier' : 'driver';
   const [page, setPage] = useState(initialPage);
   const [loginRole, setLoginRole] = useState(initialRole);
   const [user, setUser] = useState(readSessionUser);
-  const [token, setToken] = useState(() => sessionStorage.getItem('gomrok-session-token') || '');
+  const [token, setToken] = useState(() => readStorage(sessionStorage, SESSION_TOKEN_KEY));
+  const [refreshToken, setRefreshToken] = useState(readStoredRefreshToken);
+  const [authReady, setAuthReady] = useState(() => !readStoredRefreshToken());
   const [registration, setRegistration] = useState(null);
+  const refreshTokenRef = useRef(refreshToken);
+
+  const navigateAuth = (nextPage, nextRole) => {
+    const path = nextPage === 'carrier-register' ? '/app/careers/register' : nextPage === 'driver-register' ? '/app/driver/register' : nextPage === 'role-select' ? '/app/select-role' : nextRole === 'carrier' ? '/carrier-login' : '/driver-login';
+    window.history.pushState({}, '', path);
+    if (nextRole) setLoginRole(nextRole);
+    setPage(nextPage);
+  };
+
+  useEffect(() => {
+    refreshTokenRef.current = refreshToken;
+  }, [refreshToken]);
+
+  const hasRefreshToken = Boolean(refreshToken);
+  useEffect(() => {
+    if (!hasRefreshToken) {
+      setAuthReady(true);
+      return undefined;
+    }
+
+    let active = true;
+    const refreshSession = async () => {
+      const currentRefreshToken = refreshTokenRef.current;
+      if (!currentRefreshToken) return;
+      try {
+        const result = await apiRequest('/api/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken: currentRefreshToken }) });
+        if (!active) return;
+        const storedUser = readSessionUser();
+        if (!storedUser || !result.token) throw new Error('نشست ذخیره‌شده کامل نیست.');
+        const nextRefreshToken = result.refreshToken || currentRefreshToken;
+        persistSession({ user: storedUser, token: result.token, refreshToken: nextRefreshToken });
+        refreshTokenRef.current = nextRefreshToken;
+        setRefreshToken(nextRefreshToken);
+        setToken(result.token);
+        setUser(storedUser);
+      } catch (error) {
+        if (!active) return;
+        if (error.status === 401 || error.code === 'AUTH-401' || error.message === 'نشست ذخیره‌شده کامل نیست.') {
+          clearSession();
+          refreshTokenRef.current = '';
+          setRefreshToken('');
+          setToken('');
+          setUser(null);
+          setLoginRole(initialRole);
+          setPage('login');
+        }
+      } finally {
+        if (active) setAuthReady(true);
+      }
+    };
+
+    let refreshTimer;
+    const refreshKickoff = window.setTimeout(() => {
+      refreshSession();
+      refreshTimer = window.setInterval(refreshSession, 10 * 60 * 1000);
+    }, 0);
+    return () => {
+      active = false;
+      window.clearTimeout(refreshKickoff);
+      if (refreshTimer) window.clearInterval(refreshTimer);
+    };
+  }, [hasRefreshToken, initialRole]);
 
   if (isDesignPreviewHub) return <DesignPreviewHub />;
 
@@ -888,15 +1063,9 @@ export default function App() {
     return <PlatformWorkspace user={DESIGN_PREVIEW_USERS[designPreviewRole]} token="local-design-preview" apiUrl="" onLogout={() => { window.history.pushState({}, '', '/app'); window.location.reload(); }} />;
   }
 
-  const navigateAuth = (nextPage, nextRole) => {
-    const path = nextPage === 'carrier-register' ? '/app/careers' : nextPage === 'driver-register' ? '/app/driver' : nextPage === 'role-select' ? '/app/select-role' : nextRole === 'carrier' ? '/carrier-login' : '/driver-login';
-    window.history.pushState({}, '', path);
-    if (nextRole) setLoginRole(nextRole);
-    setPage(nextPage);
-  };
-
   if (registration) return <RegistrationSubmittedPage registration={registration} onContinue={() => { setRegistration(null); navigateAuth('login', registration.role === 'carrier' ? 'carrier' : 'driver'); }} />;
-  if (user && token) return <PlatformWorkspace user={user} token={token} apiUrl={API_URL} onLogout={() => { sessionStorage.removeItem('gomrok-session-token'); sessionStorage.removeItem('gomrok-refresh-token'); sessionStorage.removeItem('gomrok-session-user'); sessionStorage.removeItem('gomrok-admin-step-up-token'); setToken(''); setUser(null); navigateAuth('login', user.role === 'carrier' ? 'carrier' : 'driver'); }} />;
+  if (!authReady) return <div className="platform-loading" dir="rtl">در حال بررسی نشست امن…</div>;
+  if (user && token) return <PlatformWorkspace user={user} token={token} apiUrl={API_URL} onLogout={() => { const role = user.role === 'carrier' ? 'carrier' : 'driver'; clearSession(); refreshTokenRef.current = ''; setRefreshToken(''); setToken(''); setUser(null); navigateAuth('login', role); }} />;
   if (page === 'admin') return <AdminPage />;
   if (page === 'role-select') return <RoleSelectionPage onDriverLogin={() => navigateAuth('login', 'driver')} onCarrierLogin={() => navigateAuth('login', 'carrier')} />;
   if (page === 'driver-register') return <RegisterPage onRegistered={setRegistration} />;
@@ -906,7 +1075,7 @@ export default function App() {
       initialRole={loginRole}
       onDriverRegister={() => navigateAuth('driver-register', 'driver')}
       onCarrierRegister={() => navigateAuth('carrier-register', 'carrier')}
-      onLoggedIn={(nextUser, nextToken, nextRefreshToken) => { sessionStorage.setItem('gomrok-session-token', nextToken); sessionStorage.setItem('gomrok-session-user', JSON.stringify(nextUser)); if (nextRefreshToken) sessionStorage.setItem('gomrok-refresh-token', nextRefreshToken); setToken(nextToken); setUser(nextUser); }}
+      onLoggedIn={(nextUser, nextToken, nextRefreshToken, phone, role) => { persistSession({ user: nextUser, token: nextToken, refreshToken: nextRefreshToken, phone, role }); refreshTokenRef.current = nextRefreshToken || ''; setRefreshToken(nextRefreshToken || ''); setToken(nextToken); setUser(nextUser); setAuthReady(true); }}
     />
   );
 }

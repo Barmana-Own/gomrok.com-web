@@ -7,7 +7,7 @@ Baseline revision: `dd06d23`
 - React/Vite client under `client/`
 - Express/MySQL server under `server/`
 - Shared policy contract under `shared/contract.js`
-- Public routes: `/app`, `/app/driver`, `/app/careers`, `/driver-login`, `/carrier-login`, `/admin/v2`, `/app/admin/v2`
+- Public routes: `/app`, `/app/driver`, `/app/careers`, `/app/driver/register`, `/app/careers/register`, `/driver-login`, `/carrier-login`, `/admin/v2`, `/app/admin/v2`
 - Development-only role previews: `/app/preview/shipper`, `/app/preview/company-x`, `/app/preview/company-y`, `/app/preview/driver`, `/app/preview/agent`, `/app/preview/admin`
 
 ## Protected role surfaces

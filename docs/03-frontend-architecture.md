@@ -17,10 +17,12 @@ The existing React 18 and Vite 6 stack was retained. The redesign introduces no 
 
 ## Route map
 
-- Public: `/app`, `/driver-login`, `/carrier-login`, `/app/driver`, `/app/careers`, `/admin/v2`.
+- Public: `/app`, `/driver-login`, `/carrier-login`, `/app/driver`, `/app/careers`, `/app/driver/register`, `/app/careers/register`, `/admin/v2`.
 - Development review hub: `/app/preview`.
 - Development role previews: `/app/preview/{shipper|company-x|company-y|driver|agent|admin}`.
 - Preview routes are gated by `import.meta.env.DEV` and therefore do not create a production authentication bypass.
+
+`/app/driver` and `/app/careers` are role-specific login entries. Registration is intentionally separated into `/app/driver/register` and `/app/careers/register`; the login flow persists a rotating refresh session for the server-provided 30-day lifetime and restores it on app startup.
 
 ## Component and state strategy
 

@@ -24,7 +24,10 @@ The frontend remains compatible with the existing Vite production base `/app/`. 
 - Production config import with strong validation-only placeholders: PASS.
 - Vite production build: PASS.
 - Vite production preview base and `/app/assets/*` JavaScript response: PASS.
-- External deployment: NOT_PERFORMED because no target or credentials were requested.
+- Frontend deployment: PASS on 2026-09-05; the active IIS release path was discovered, the `/app` build was atomically replaced, and the previous app directory was retained as a server-side backup.
+- Backend deployment: PASS on 2026-09-05; the API source was atomically replaced while preserving the existing server `.env`, dependencies, scheduled task and runtime configuration. `GomrokAppApi` restarted successfully.
+- Remote database migration: PASS; the existing idempotent migration completed before the backend restart.
+- Live smoke checks: PASS; `/app/driver` and `/app/careers` served the current hashed assets, registration artwork returned `200`, the manifest uses `/app`, the service worker cache is `v3`, and `/app/api/auth/refresh` returned an expected `401` for an invalid token rather than `404`.
 
 STAGE_11_STATUS: PASS
 NEXT_STAGE: 12-fullstack-final-review
