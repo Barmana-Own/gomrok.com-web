@@ -12,7 +12,8 @@ import {
   ADMIN_USERNAME,
   IS_PRODUCTION,
   JWT_SECRET,
-  OPERATING_CONTEXT_SESSIONS_ENABLED
+  OPERATING_CONTEXT_SESSIONS_ENABLED,
+  PLATFORM_TENANT_ID
 } from './config.js';
 import { platformAuth, resolveIdempotencyKey } from './security/platform-auth.js';
 import { CONTEXT_SESSION_MODES, ERROR_CODES, PERMISSIONS, ROLES } from '../../shared/contract.js';
@@ -21,6 +22,11 @@ import {
   createOperatingContextSessionService,
   publicOperatingContext
 } from './services/operating-context-session.service.js';
+import {
+  publicPlatformUser,
+  selectPlatformMembership,
+  validatePlatformLoginInput
+} from './services/platform-login.service.js';
 import { invalidateRealtimeSession } from './realtime/broker.js';
 
 const app = express();
@@ -29,6 +35,7 @@ const jwtSecret = JWT_SECRET;
 const adminUsername = ADMIN_USERNAME;
 const adminPassword = ADMIN_PASSWORD;
 const operatingContextSessionService = createOperatingContextSessionService(pool);
+const platformLoginDummyHash = bcrypt.hashSync(`invalid-platform-login:${randomBytes(24).toString('hex')}`, 10);
 
 const configuredOrigins = String(process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || '')
   .split(',')
@@ -957,6 +964,95 @@ app.post('/api/auth/login-carrier', authRateLimit, async (request, response) => 
   } catch (error) {
     console.error(error);
     return response.status(500).json({ message: 'ورود شرکت حمل‌ونقل انجام نشد؛ اتصال دیتابیس را بررسی کن.' });
+  }
+});
+
+app.post('/api/auth/login-platform', authRateLimit, async (request, response) => {
+  let input;
+  try {
+    input = validatePlatformLoginInput(request.body);
+  } catch (error) {
+    return response.status(Number(error.status || 400)).json({ code: error.code || 'AUTH-400', message: error.message });
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      `SELECT c.id AS credential_id, c.user_id, c.password_hash, c.failed_attempts, c.locked_until,
+              u.tenant_id, u.external_type, u.external_id, u.display_name,
+              m.id AS membership_id, m.organization_id, m.role, m.transaction_role,
+              o.organization_type, o.display_name AS organization_display_name
+         FROM platform_user_credentials c
+         JOIN platform_users u ON u.id = c.user_id AND u.tenant_id = c.tenant_id
+         JOIN organization_memberships m ON m.user_id = u.id AND m.tenant_id = u.tenant_id
+         JOIN platform_organizations o ON o.id = m.organization_id AND o.tenant_id = m.tenant_id
+        WHERE c.login_identifier_normalized = ?
+          AND c.tenant_id = ?
+          AND c.status = 'active'
+          AND u.status = 'active'
+          AND m.status = 'active'
+          AND o.status = 'active'
+          AND (c.locked_until IS NULL OR c.locked_until <= NOW())
+        ORDER BY m.id ASC
+        LIMIT 50`,
+      [input.identifier, PLATFORM_TENANT_ID]
+    );
+    const credential = rows[0];
+    const passwordMatches = credential
+      ? await bcrypt.compare(input.password, credential.password_hash)
+      : await bcrypt.compare(input.password, platformLoginDummyHash);
+    if (!credential || !passwordMatches) {
+      if (credential) {
+        await pool.execute(
+          `UPDATE platform_user_credentials
+              SET failed_attempts = LEAST(failed_attempts + 1, 5),
+                  locked_until = CASE WHEN failed_attempts >= 4 THEN DATE_ADD(NOW(), INTERVAL 15 MINUTE) ELSE locked_until END
+            WHERE id = ? AND status = 'active'`,
+          [credential.credential_id]
+        );
+      }
+      return response.status(401).json({ code: 'AUTH-401', message: 'اطلاعات ورود معتبر نیست یا عضویت این پنل فعال نیست.' });
+    }
+
+    const selection = selectPlatformMembership(rows, input);
+    if (selection.kind === 'not-found') {
+      return response.status(401).json({ code: 'AUTH-401', message: 'اطلاعات ورود معتبر نیست یا عضویت این پنل فعال نیست.' });
+    }
+    if (selection.kind === 'ambiguous') {
+      return response.status(409).json({
+        code: 'AUTH-409',
+        message: 'این حساب برای چند نقش این پنل فعال است؛ نقش ورود را انتخاب کنید.',
+        roles: selection.roles
+      });
+    }
+
+    const membershipRow = selection.membership;
+    await pool.execute(
+      `UPDATE platform_user_credentials
+          SET failed_attempts = 0, locked_until = NULL, last_login_at = NOW()
+        WHERE id = ? AND status = 'active'`,
+      [credential.credential_id]
+    );
+    const account = { id: membershipRow.user_id, tenant_id: membershipRow.tenant_id };
+    const membership = {
+      userId: membershipRow.user_id,
+      membershipId: membershipRow.membership_id,
+      organizationId: membershipRow.organization_id,
+      externalType: membershipRow.external_type,
+      externalId: membershipRow.external_id,
+      role: membershipRow.role
+    };
+    const tokens = await issueLoginTokens(account, membershipRow.role, membership);
+    await writeAudit({
+      actorId: membershipRow.user_id,
+      eventType: 'PlatformUserLoggedIn',
+      subjectType: 'platform_user',
+      subjectId: membershipRow.user_id,
+      payload: { source: 'organization-login', panel: input.panel, organizationId: membershipRow.organization_id, role: membershipRow.role }
+    });
+    return response.json({ ...tokens, user: publicPlatformUser(membershipRow) });
+  } catch (error) {
+    console.error(error);
+    return response.status(503).json({ code: 'AUTH-503', message: 'ورود سازمانی موقتاً در دسترس نیست؛ اتصال سرور را بررسی کنید.' });
   }
 });
 

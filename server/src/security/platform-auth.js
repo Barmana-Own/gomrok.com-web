@@ -312,6 +312,7 @@ function idempotencyHeaderError(detail) {
   const error = new Error(detail);
   error.status = 400;
   error.code = ERROR_CODES.IDEMPOTENCY_HEADER;
+  error.expose = true;
   return error;
 }
 

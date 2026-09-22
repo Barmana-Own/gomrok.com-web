@@ -45,6 +45,7 @@
     "serverTests": "PASS: 19/19",
     "dependencyAudit": "PASS: 0 known vulnerabilities",
     "publicRoleEntryFlow": "PASS: driver/carrier role cards route to role-specific login, then matching registration CTA",
+    "publicRolePanelRoutes": "PASS: six public role links resolve to distinct paths; matching authenticated roles reach the existing workspace and mismatched/no organization sessions never fall back to the driver panel",
     "registrationFieldPresentation": "PASS: registration placeholders removed and click focus remains a single clean field outline on driver and carrier forms",
     "welcomeBrandAlignment": "PASS: welcome status pill remains on the left and GOMROK logo block on the right in RTL, including 390px mobile layout",
     "carrierTerminology": "PASS: user-facing Persian carrier labels use شرکت حمل‌ونقل across login, registration, account, admin and API feedback surfaces",
@@ -54,7 +55,8 @@
     "dockerComposeConfig": "PASS",
     "productionBaseAssetSmoke": "PASS: /app/ hashed JavaScript served as text/javascript",
     "liveDatabaseMigration": "PASS: authorized server migration completed successfully",
-    "externalDeployment": "PASS: frontend and backend deployed to the active IIS release and live smoke checks passed"
+    "externalDeployment": "PASS: frontend and backend deployed to the active IIS release and live smoke checks passed",
+    "rolePanelRouteDeployment": "PASS: final client release 20260922-200242 and root release 20260922-195840 verified live"
   },
   "reworkHistory": [
     "Reset legacy Driver/Admin brand selectors that clipped the new ProductLogo.",
@@ -68,9 +70,10 @@
     "Removed example placeholder text from driver and carrier registration inputs and eliminated the nested click-focus rectangle while keeping labels and icons clear.",
     "Made the welcome header's RTL left/right alignment explicit and kept the security status pill visible beside the logo on narrow screens.",
     "Replaced the previous user-facing Persian carrier terminology with شرکت حمل‌ونقل across public auth/registration, account, admin and registration feedback surfaces without changing carrier role or API identifiers.",
-    "Published the current frontend to the active IIS release and published the backend source with the 30-day refresh-token endpoint, preserving server configuration and retaining rollback backups."
+    "Published the current frontend to the active IIS release and published the backend source with the 30-day refresh-token endpoint, preserving server configuration and retaining rollback backups.",
+    "Separated the public six-panel menu into role-specific entry paths and added a fail-closed client route guard that never renders the driver workspace for an unrelated role or missing organization session."
   ],
   "nextStage": null,
   "workflowStatus": "COMPLETE",
-  "updatedAt": "2026-09-05"
+  "updatedAt": "2026-09-22"
 }

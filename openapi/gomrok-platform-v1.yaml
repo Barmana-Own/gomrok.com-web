@@ -9,6 +9,51 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /auth/login-platform:
+    post:
+      summary: Authenticate a provisioned organization user for one product panel
+      operationId: loginPlatformUser
+      description: |-
+        The server resolves the submitted identifier to an IAM-provisioned
+        credential and an active membership allowed by the requested panel.
+        No default password, client-supplied tenant, or client-supplied role is
+        accepted. Ambiguous memberships return safe role choices with HTTP 409.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlatformLoginInput'
+      responses:
+        '200':
+          description: Authenticated organization session and role-scoped user projection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformLoginResponse'
+        '400':
+          description: Invalid panel, identifier, password length, or requested role
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: The credential has more than one active role in the requested panel
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, message, roles]
+                properties:
+                  code: { type: string, example: AUTH-409 }
+                  message: { type: string }
+                  roles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlatformLoginRoleOption'
+        '429':
+          description: Login rate limit or credential lockout
+        '503':
+          description: Authentication dependency unavailable
   /auth/refresh:
     post:
       summary: Rotate a refresh token and issue a short-lived access token
@@ -1017,6 +1062,22 @@ paths:
       operationId: getAdminGovernanceDashboard
       parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
       responses: { '200': { description: Aggregate governance metrics and sealed RFQ metadata } }
+  /platform/admin/legacy-registrations:
+    get:
+      summary: Read masked legacy driver and carrier registration data for Super Admin review
+      operationId: getAdminLegacyRegistrations
+      description: |-
+        Returns tenant-scoped counts and masked registration projections from the
+        existing driver, carrier, and registration-request tables. Raw phone and
+        identity values are never returned. This is a compatibility read model;
+        it does not replace the platform IAM or legacy write routes.
+      parameters:
+        - { $ref: '#/components/parameters/PurposeScope' }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+      responses: { '200': { description: Masked legacy registration read model } }
   /platform/admin/organizations:
     get:
       summary: Search tenant-scoped organizations with minimum necessary governance fields
@@ -1029,6 +1090,27 @@ paths:
       operationId: getAdminUsers
       parameters: [{ $ref: '#/components/parameters/PurposeScope' }]
       responses: { '200': { description: Membership governance read model } }
+  /platform/admin/users/{userId}/credentials:
+    put:
+      summary: Provision or rotate a non-staff platform user's organization credential
+      operationId: provisionPlatformUserCredential
+      parameters: [{ $ref: '#/components/parameters/UserId' }, { $ref: '#/components/parameters/PurposeScope' }, { $ref: '#/components/parameters/IdempotencyKey' }, { $ref: '#/components/parameters/StepUpToken' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [loginIdentifier, password]
+              properties:
+                loginIdentifier: { type: string, minLength: 7, maxLength: 180 }
+                password: { type: string, format: password, minLength: 12, maxLength: 256 }
+      responses:
+        '200': { description: Credential provisioned; the password is never returned }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Login identifier is already assigned to another user }
+        '428': { description: 'Missing step-up, purpose, or idempotency evidence' }
   /platform/admin/users/{userId}/sessions/revoke:
     post:
       summary: Revoke active sessions for a scoped user with security audit
@@ -1521,6 +1603,45 @@ components:
         contexts:
           type: array
           items: { $ref: '#/components/schemas/OperatingContextSummary' }
+    PlatformLoginInput:
+      type: object
+      additionalProperties: false
+      required: [panel, identifier, password]
+      properties:
+        panel: { type: string, enum: [shipper, forwarder, agent] }
+        identifier: { type: string, minLength: 7, maxLength: 180, description: Work email or Iranian mobile number }
+        password: { type: string, format: password, minLength: 12, maxLength: 256 }
+        role:
+          type: string
+          nullable: true
+          description: Optional role selected after the server reports an ambiguous active membership
+    PlatformLoginRoleOption:
+      type: object
+      required: [role, label]
+      properties:
+        role: { type: string }
+        label: { type: string }
+    PlatformLoginUser:
+      type: object
+      required: [id, userId, displayName, role, tenantId, organizationId, membershipId, status]
+      properties:
+        id: { type: integer, minimum: 1 }
+        userId: { type: integer, minimum: 1 }
+        displayName: { type: string }
+        role: { type: string }
+        tenantId: { type: string }
+        organizationId: { type: string }
+        organizationType: { type: string }
+        membershipId: { type: integer, minimum: 1 }
+        status: { type: string, enum: [active] }
+    PlatformLoginResponse:
+      type: object
+      required: [token, refreshToken, user]
+      properties:
+        token: { type: string }
+        refreshToken: { type: string }
+        user:
+          $ref: '#/components/schemas/PlatformLoginUser'
     ContextTransitionInput:
       type: object
       additionalProperties: false

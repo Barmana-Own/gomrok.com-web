@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { buildRealtimeHeaders, shouldRetryRealtimeStatus } from './realtime-request.js';
 
 function parseEvents(buffer, onEvent) {
   const chunks = buffer.split('\n\n');
@@ -12,7 +13,7 @@ function parseEvents(buffer, onEvent) {
   return remainder;
 }
 
-export function usePlatformRealtime({ apiUrl, token, onEvent, enabled = true }) {
+export function usePlatformRealtime({ apiUrl, token, purpose = '', onEvent, enabled = true }) {
   const callbackRef = useRef(onEvent);
   const refreshTimerRef = useRef(null);
   callbackRef.current = onEvent;
@@ -33,11 +34,16 @@ export function usePlatformRealtime({ apiUrl, token, onEvent, enabled = true }) 
       while (!disposed) {
         try {
           const response = await fetch(`${apiUrl}/api/platform/realtime`, {
-            headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
+            headers: buildRealtimeHeaders({ token, purpose }),
             cache: 'no-store',
             signal: controller.signal
           });
-          if (!response.ok || !response.body) throw new Error(`realtime-${response.status}`);
+          if (!response.ok || !response.body) {
+            // Authentication and authorization failures are deterministic. Do not
+            // retry them forever and flood the browser console.
+            if (!shouldRetryRealtimeStatus(response.status)) return;
+            throw new Error(`realtime-${response.status}`);
+          }
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
           let buffer = '';
@@ -65,7 +71,7 @@ export function usePlatformRealtime({ apiUrl, token, onEvent, enabled = true }) 
       if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = null;
     };
-  }, [apiUrl, token, enabled]);
+  }, [apiUrl, token, purpose, enabled]);
 }
 
 export default usePlatformRealtime;

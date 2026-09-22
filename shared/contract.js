@@ -134,6 +134,7 @@ export const RFQ_LEVELS = Object.freeze({ MARKET_A: 'RFQ1', MARKET_B: 'RFQ2' });
 export const RFQ_STATES = Object.freeze(['OPEN', 'AWARDED', 'CANCELLED', 'EXPIRED']);
 
 export const EVENTS = Object.freeze([
+  'PlatformCredentialProvisioned',
   'CargoRequestCreated',
   'CargoRequestUpdated',
   'RFQPublished',

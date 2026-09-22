@@ -199,6 +199,28 @@ CREATE TABLE IF NOT EXISTS platform_users (
   KEY idx_platform_users_tenant_status (tenant_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Platform roles authenticate through a credential record that is separate from
+-- membership/organization data. Credentials are provisioned by the governed IAM
+-- workflow; this table never receives a default password or a client-supplied role.
+CREATE TABLE IF NOT EXISTS platform_user_credentials (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  login_identifier VARCHAR(180) NOT NULL,
+  login_identifier_normalized VARCHAR(180) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'active',
+  failed_attempts INT UNSIGNED NOT NULL DEFAULT 0,
+  locked_until DATETIME NULL,
+  last_login_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_platform_credential_login (tenant_id, login_identifier_normalized),
+  UNIQUE KEY uq_platform_credential_user (tenant_id, user_id),
+  KEY idx_platform_credential_status (tenant_id, status, locked_until)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS organization_memberships (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   tenant_id VARCHAR(64) NOT NULL,

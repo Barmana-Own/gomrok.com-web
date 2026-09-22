@@ -8,12 +8,18 @@ $remoteSession = $null
 
 $localRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $localServer = Join-Path $localRoot 'server'
+$localSharedContract = Join-Path $localRoot 'shared\contract.js'
 $remoteRoot = 'C:\Websites\gomrok.org'
 $remoteBackend = Join-Path $remoteRoot 'backend'
+$remoteShared = Join-Path $remoteRoot 'shared'
 $remoteStage = Join-Path $remoteRoot "backend.__new-$deployStamp"
+$remoteSharedStage = Join-Path $remoteRoot "shared.__new-$deployStamp"
 
 if (-not (Test-Path (Join-Path $localServer 'src\app.js'))) {
   throw 'server/src/app.js is missing.'
+}
+if (-not (Test-Path -LiteralPath $localSharedContract)) {
+  throw 'shared/contract.js is missing.'
 }
 
 try {
@@ -24,24 +30,34 @@ try {
   }
 
   Invoke-Command -Session $remoteSession -ScriptBlock {
-    param($stagePath)
+    param($stagePath, $sharedStagePath)
     if (Test-Path -LiteralPath $stagePath) { Remove-Item -LiteralPath $stagePath -Recurse -Force }
     New-Item -ItemType Directory -Path (Join-Path $stagePath 'src') -Force | Out-Null
-  } -ArgumentList $remoteStage
+    if (Test-Path -LiteralPath $sharedStagePath) { Remove-Item -LiteralPath $sharedStagePath -Recurse -Force }
+    New-Item -ItemType Directory -Path $sharedStagePath -Force | Out-Null
+  } -ArgumentList $remoteStage, $remoteSharedStage
 
   Copy-Item -Path (Join-Path $localServer 'src\*') -Destination (Join-Path $remoteStage 'src') -ToSession $remoteSession -Recurse -Force
+  Copy-Item -LiteralPath $localSharedContract -Destination (Join-Path $remoteSharedStage 'contract.js') -ToSession $remoteSession -Force
 
   $result = Invoke-Command -Session $remoteSession -ScriptBlock {
-    param($backendPath, $stagePath, $stamp)
+    param($backendPath, $stagePath, $sharedPath, $sharedStagePath, $stamp)
     $ErrorActionPreference = 'Stop'
     $srcPath = Join-Path $backendPath 'src'
     $srcBackup = Join-Path $backendPath "src.backup-$stamp"
+    $contractPath = Join-Path $sharedPath 'contract.js'
+    $contractBackup = Join-Path $sharedPath "contract.js.backup-$stamp"
+    $contractStagePath = Join-Path $sharedStagePath 'contract.js'
     $taskName = 'GomrokAppApi'
     $started = $false
+    $sourceSwapped = $false
+    $contractSwapped = $false
 
     if (-not (Test-Path (Join-Path $stagePath 'src\app.js'))) { throw 'Staged backend is missing src/app.js.' }
+    if (-not (Test-Path -LiteralPath $contractStagePath)) { throw 'Staged shared/contract.js is missing.' }
     if (-not (Test-Path (Join-Path $backendPath '.env'))) { throw 'Existing backend .env is missing; deployment stopped to preserve configuration.' }
     if (-not (Test-Path (Join-Path $backendPath 'node_modules\mysql2'))) { throw 'Existing backend dependencies are missing; deployment stopped.' }
+    if (-not (Test-Path -LiteralPath $sharedPath)) { New-Item -ItemType Directory -Path $sharedPath -Force | Out-Null }
 
     try {
       $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
@@ -56,6 +72,10 @@ try {
 
       Move-Item -LiteralPath $srcPath -Destination $srcBackup
       Move-Item -LiteralPath (Join-Path $stagePath 'src') -Destination $srcPath
+      $sourceSwapped = $true
+      if (Test-Path -LiteralPath $contractPath) { Move-Item -LiteralPath $contractPath -Destination $contractBackup }
+      Move-Item -LiteralPath $contractStagePath -Destination $contractPath
+      $contractSwapped = $true
 
       Start-ScheduledTask -TaskName $taskName
       $started = $true
@@ -87,14 +107,17 @@ try {
       }
     } catch {
       if ($started) { Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue }
-      if (Test-Path $srcPath) { Remove-Item -LiteralPath $srcPath -Recurse -Force }
+      if ($sourceSwapped -and (Test-Path $srcPath)) { Remove-Item -LiteralPath $srcPath -Recurse -Force }
       if (Test-Path $srcBackup) { Move-Item -LiteralPath $srcBackup -Destination $srcPath }
+      if ($contractSwapped -and (Test-Path $contractPath)) { Remove-Item -LiteralPath $contractPath -Force }
+      if (Test-Path $contractBackup) { Move-Item -LiteralPath $contractBackup -Destination $contractPath }
       if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) { Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue }
       throw
     } finally {
       if (Test-Path $stagePath) { Remove-Item -LiteralPath $stagePath -Recurse -Force -ErrorAction SilentlyContinue }
+      if (Test-Path $sharedStagePath) { Remove-Item -LiteralPath $sharedStagePath -Recurse -Force -ErrorAction SilentlyContinue }
     }
-  } -ArgumentList $remoteBackend, $remoteStage, $deployStamp | Format-List | Out-String
+  } -ArgumentList $remoteBackend, $remoteStage, $remoteShared, $remoteSharedStage, $deployStamp | Format-List | Out-String
 } finally {
   if ($remoteSession) { Remove-PSSession $remoteSession }
 }

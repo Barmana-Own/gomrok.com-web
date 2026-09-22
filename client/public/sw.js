@@ -1,6 +1,6 @@
 // Bump this value whenever a new frontend release is deployed so clients
 // discard cached HTML/assets from the previous release.
-const CACHE_NAME = 'gomrok-app-shell-v3';
+const CACHE_NAME = 'gomrok-app-shell-v4';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.add(new URL('./', self.registration.scope).href)));

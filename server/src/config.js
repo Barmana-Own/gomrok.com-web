@@ -30,5 +30,10 @@ export const JWT_SECRET = configuredJwtSecret || randomBytes(48).toString('base6
 export const STEP_UP_SECRET = configuredStepUpSecret || randomBytes(48).toString('base64url');
 export const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || 'admin').trim() || 'admin';
 export const ADMIN_PASSWORD = configuredAdminPassword || null;
+const configuredPlatformTenantId = String(process.env.PLATFORM_TENANT_ID || 'platform').trim();
+if (!configuredPlatformTenantId || configuredPlatformTenantId.length > 64) {
+  throw new Error('PLATFORM_TENANT_ID must contain between 1 and 64 characters.');
+}
+export const PLATFORM_TENANT_ID = configuredPlatformTenantId;
 export const IS_PRODUCTION = nodeEnv === 'production';
 export const OPERATING_CONTEXT_SESSIONS_ENABLED = process.env.OPERATING_CONTEXT_SESSIONS_ENABLED === 'true';
