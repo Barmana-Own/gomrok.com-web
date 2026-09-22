@@ -7,6 +7,7 @@ import 'dotenv/config';
 import { pingDatabase, pool } from './db.js';
 import platformRouter from './routes/platform.routes.js';
 import adminRouter from './routes/admin.routes.js';
+import cargoInquiryRouter from './routes/cargo-inquiry.routes.js';
 import {
   ADMIN_PASSWORD,
   ADMIN_USERNAME,
@@ -1139,6 +1140,7 @@ app.post('/api/auth/change-password', platformAuth({ roles: [ROLES.DRIVER, ROLES
 
 app.use('/api/platform', platformRouter);
 app.use('/api/platform/admin', adminRouter);
+app.use('/api/cargo-inquiries', cargoInquiryRouter);
 
 export { app };
 

@@ -97,6 +97,28 @@ button { cursor: pointer; }
 .mega-column { display: grid; align-content: start; gap: 9px; }
 .mega-column a { color: rgba(249,250,246,.76); font-size: var(--font-size-navigation); font-weight: var(--font-weight-navigation); line-height: var(--line-height-navigation); letter-spacing: 0; }
 .mega-column a:hover { color: var(--lime); }
+.system-menu { display: block; width: min(760px, calc(100vw - 32px)); padding: 18px; }
+.system-menu-intro { display: grid; gap: 3px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.system-menu-intro .menu-label { margin-bottom: 0; }
+.system-menu-intro p:last-child { margin: 0; color: rgba(249,250,246,.62); font-size: .78rem; line-height: 1.8; }
+.system-role-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.system-role-card { display: grid; gap: 5px; min-height: 83px; padding: 13px 14px; border: 1px solid rgba(157,255,37,.2); border-radius: 11px; background: rgba(255,255,255,.035); transition: background-color .2s ease, border-color .2s ease, transform .2s ease; }
+.system-role-card strong { color: var(--white); font-size: .92rem; font-weight: var(--font-weight-button); line-height: 1.55; }
+.system-role-card span { color: rgba(249,250,246,.62); font-size: .72rem; line-height: 1.7; }
+.system-role-card:hover { border-color: rgba(157,255,37,.65); background: rgba(157,255,37,.1); transform: translateY(-2px); }
+.guide-menu { width: min(760px, calc(100vw - 32px)); grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.features-menu { width: min(900px, calc(100vw - 32px)); grid-template-columns: minmax(190px, .8fr) minmax(0, 2.2fr); gap: 20px; align-items: start; }
+.features-menu-sidebar { display: grid; gap: 21px; }
+.feature-problem-list { padding-top: 15px; border-top: 1px solid rgba(255,255,255,.1); }
+.comparison-menu-block { min-width: 0; }
+.comparison-menu-block .menu-label { margin-bottom: 9px; }
+.comparison-table-wrap { width: 100%; overflow-x: auto; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; scrollbar-width: thin; }
+.comparison-table { width: 100%; min-width: 610px; border-collapse: collapse; color: rgba(249,250,246,.82); font-size: .7rem; line-height: 1.65; text-align: right; }
+.comparison-table th, .comparison-table td { padding: 8px 9px; border-bottom: 1px solid rgba(255,255,255,.1); vertical-align: top; }
+.comparison-table thead th { color: var(--lime); background: rgba(157,255,37,.08); font-weight: var(--font-weight-button); white-space: nowrap; }
+.comparison-table tbody tr:last-child th, .comparison-table tbody tr:last-child td { border-bottom: 0; }
+.comparison-table tbody th { color: var(--white); font-weight: var(--font-weight-button); white-space: nowrap; }
+.comparison-table tbody td:last-child { color: var(--lime); font-weight: var(--font-weight-button); }
 .menu-label, .footer-label, .mobile-panel-label { margin: 0 0 5px; color: rgba(157,255,37,.86); font: var(--font-weight-button) var(--font-size-label)/var(--line-height-label) var(--font-family); letter-spacing: 0; text-transform: none; }
 .header-actions { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; }
 .phone-button, .header-cta, .lime-cta, .light-cta, .footer-cta, .card-cta, .form-submit {
@@ -128,6 +150,17 @@ button { cursor: pointer; }
 .mobile-panel-inner { display: grid; gap: 17px; width: min(500px, 100%); margin: 0 auto; }
 .mobile-panel-inner > a { font-size: var(--font-size-navigation); font-weight: var(--font-weight-navigation); line-height: var(--line-height-navigation); letter-spacing: 0; }
 .mobile-panel-actions { display: grid; gap: 10px; margin-top: 20px; }
+.mobile-menu-group { border-top: 1px solid rgba(255,255,255,.14); padding-top: 12px; }
+.mobile-menu-group summary { cursor: pointer; color: var(--lime); font-size: var(--font-size-navigation); font-weight: var(--font-weight-button); list-style: none; }
+.mobile-menu-group summary::-webkit-details-marker { display: none; }
+.mobile-menu-group summary::before { content: "＋"; display: inline-block; margin-left: 8px; color: rgba(249,250,246,.72); }
+.mobile-menu-group[open] summary::before { content: "−"; }
+.mobile-role-list, .mobile-menu-links { display: grid; gap: 9px; margin-top: 12px; padding-right: 15px; }
+.mobile-role-list a { display: grid; gap: 2px; padding: 9px 11px; border: 1px solid rgba(157,255,37,.2); border-radius: 9px; background: rgba(255,255,255,.04); }
+.mobile-role-list strong { color: var(--white); font-size: .88rem; font-weight: var(--font-weight-button); }
+.mobile-role-list span { color: rgba(249,250,246,.62); font-size: .74rem; line-height: 1.7; }
+.mobile-menu-links a { color: rgba(249,250,246,.78); font-size: var(--font-size-navigation); }
+.mobile-menu-links a:hover, .mobile-menu-group summary:hover { color: var(--lime); }
 
 .hero-scroll { position: relative; min-height: 300vh; background: var(--deep); }
 .hero-sticky { position: sticky; top: 0; min-height: 100dvh; overflow: hidden; isolation: isolate; }
@@ -275,6 +308,21 @@ button { cursor: pointer; }
 .platform-card-copy p:not(.card-label) { margin: 0 0 20px; color: rgba(249,250,246,.72); font-size: var(--font-size-body); font-weight: var(--font-weight-regular); line-height: var(--line-height-body); letter-spacing: 0; }
 .platform-card-copy a { color: var(--lime); font-size: var(--font-size-navigation); font-weight: var(--font-weight-navigation); line-height: var(--line-height-navigation); letter-spacing: 0; }
 
+.transport-section { padding: 112px 0 122px; }
+.transport-section .section-heading > .section-lead { max-width: 850px; margin: 30px auto 0; }
+.transport-role-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 58px; }
+.transport-role-card { min-height: 245px; padding: 28px 26px; border: 1px solid rgba(6,42,40,.11); border-radius: 18px; background: var(--paper-2); }
+.transport-role-card .card-label { margin-bottom: 16px; color: #71807a; }
+.transport-role-card h3 { margin: 0 0 14px; font-size: 1.25rem; font-weight: var(--font-weight-card-title); line-height: 1.55; }
+.transport-role-card p:not(.card-label) { margin: 0; color: #596864; font-size: var(--font-size-body); line-height: var(--line-height-body); }
+.transport-comparison { margin-top: 64px; padding: 32px; border-radius: 22px; background: linear-gradient(145deg, #0a332f, #041d1c); color: var(--white); box-shadow: 0 28px 70px rgba(5,37,35,.12); }
+.transport-comparison-heading { display: flex; align-items: end; justify-content: space-between; gap: 22px; margin-bottom: 24px; }
+.transport-comparison-heading .card-label { margin-bottom: 8px; color: var(--lime); }
+.transport-comparison-heading h3 { margin: 0; font-size: 1.35rem; font-weight: var(--font-weight-card-title); line-height: 1.55; }
+.transport-comparison-heading .card-cta { flex: 0 0 auto; min-height: 44px; padding-inline: 16px; background: rgba(255,255,255,.11); color: var(--white); }
+.comparison-table--large { min-width: 760px; font-size: .88rem; line-height: 1.8; }
+.comparison-table--large th, .comparison-table--large td { padding: 13px 14px; }
+.comparison-note { margin: 17px 0 0; color: rgba(249,250,246,.58); font-size: .76rem; line-height: 1.8; }
 .industry-intro { padding: 104px 0 88px; }
 .industry-logos { padding-bottom: 0; }
 .logo-grid-secondary { grid-template-columns: repeat(3, 1fr); }
@@ -414,6 +462,17 @@ button { cursor: pointer; }
   .carousel-buttons { align-self: flex-end; }
   .platform-card, .platform-card:not(.is-active) { flex-basis: 88%; min-height: 500px; }
   .platform-card:not(.is-active) .platform-card-copy h3, .platform-card-copy h3 { font-size: 1.15rem; line-height: 1.55; }
+  .transport-section { padding-block: 78px 84px; }
+  .transport-section .section-heading > .section-lead { margin-top: 24px; }
+  .transport-role-grid { grid-template-columns: 1fr; gap: 13px; margin-top: 40px; }
+  .transport-role-card { min-height: 0; padding: 23px 21px; }
+  .transport-role-card h3 { font-size: 1.15rem; }
+  .transport-comparison { margin-top: 40px; padding: 22px 16px; border-radius: 17px; }
+  .transport-comparison-heading { align-items: stretch; flex-direction: column; gap: 16px; }
+  .transport-comparison-heading h3 { font-size: 1.15rem; }
+  .transport-comparison-heading .card-cta { width: 100%; }
+  .comparison-table--large { min-width: 710px; font-size: .8rem; }
+  .comparison-note { font-size: .72rem; }
   .logo-grid-secondary { grid-template-columns: repeat(2, 1fr); }
   .logo-grid-secondary img { height: 115px; padding: 22px 16px; }
   .industry-intro { padding-block: 78px 65px; }

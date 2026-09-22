@@ -73,6 +73,28 @@
     "Published the current frontend to the active IIS release and published the backend source with the 30-day refresh-token endpoint, preserving server configuration and retaining rollback backups.",
     "Separated the public six-panel menu into role-specific entry paths and added a fail-closed client route guard that never renders the driver workspace for an unrelated role or missing organization session."
   ],
+  "cargoInquiryModule": {
+    "status": "IMPLEMENTED_PENDING_SCHEMA_MIGRATION",
+    "sourceSpecification": "سند نیازمندی و مشخصات اجرایی فرم جامع استعلام قیمت بار، استعلام از رانندگان و استعلام پشتیبانی، نسخه 1.0، 2026-09-22",
+    "publicRoute": "/app/quote",
+    "formStages": "IMPLEMENTED: nine-stage mobile-first RTL form with route, schedule, cargo, measurement, vehicle, special requirements, site services, documents/contact, and review/consent",
+    "automaticPath": "IMPLEMENTED: guest draft, encrypted replay token, authenticated shipper continuation, server revalidation, eligibility snapshot and driver broadcast",
+    "supportPath": "IMPLEMENTED: guest validation, tracking code, support queue, assignment, request-info, risk decision and versioned manual quotes",
+    "offers": "IMPLEMENTED: eligible-driver projection and driver UI, one-offer-per-driver/version, integer minor-unit pricing, revisions, expiry checks and transactional selection",
+    "structuredSnapshot": "IMPLEMENTED: versioned stops, items, special requirements, consents, broadcasts, offer revisions, support quotes, messages, notifications and risk reviews",
+    "statusLifecycle": "IMPLEMENTED: server state plus client-safe status mapping for draft, review, support, matching, open quotes, received quotes, selected quote, cancellation and expiry",
+    "sensitiveDataProtection": "IMPLEMENTED: encrypted payload fields for contact, address, value and special requirements; masked scalar contacts; privacy-safe driver projection",
+    "migrationArtifact": "server/migrations/20260922_cargo-inquiry.sql",
+    "migrationExecution": "NOT_RUN_BY_DESIGN",
+    "fileStorageIntegration": "NOT_CONFIGURED: document routes fail closed with FILE_STORAGE_NOT_CONFIGURED until private storage and scanning are selected",
+    "validation": {
+      "serverTests": "PASS: 131/131",
+      "clientTests": "PASS: 4/4",
+      "productionBuild": "PASS",
+      "cargoOpenApiLint": "PASS: zero errors and zero warnings",
+      "databaseMigration": "NOT_RUN"
+    }
+  },
   "nextStage": null,
   "workflowStatus": "COMPLETE",
   "updatedAt": "2026-09-22"

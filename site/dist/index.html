@@ -25,20 +25,30 @@
               <button class="menu-trigger" type="button" data-menu-trigger="system" aria-expanded="false">
                 سامانه
               </button>
-              <div class="mega-menu" data-menu-panel="system" hidden>
-                <div class="mega-column">
-                  <p class="menu-label">سامانه</p>
-                  <a href="#why-terminal">چرا گمرک</a>
-                  <a href="#platform">سامانه هوشمند گمرکی چیست؟</a>
-                  <a href="#platform">مدیریت هوشمند گمرک</a>
-                  <a href="#features">تصمیم‌یار هوشمند گمرکی</a>
+              <div class="mega-menu system-menu" data-menu-panel="system" hidden>
+                <div class="system-menu-intro">
+                  <p class="menu-label">شش پنل سامانه گمرک</p>
+                  <p>هر نقش، فضای عملیاتی و سطح دسترسی مخصوص خود را دارد. برای ورود به پنل مربوط، گزینه را در تب جدید باز کنید.</p>
                 </div>
-                <div class="mega-column">
-                  <p class="menu-label">فرآیندها</p>
-                  <a href="#platform">پذیرش و کنترل ورودی</a>
-                  <a href="#platform">مدیریت محوطه گمرکی</a>
-                  <a href="#platform">کنترل بارگیری و تخلیه</a>
-                  <a href="#platform">در سراسر زنجیره ترخیص</a>
+                <div class="system-role-grid" aria-label="پنل‌های سامانه گمرک">
+                  <a class="system-role-card" href="/app/shipper" target="_blank" rel="noopener">
+                    <strong>صاحب کالا</strong><span>محموله، اسناد، رهگیری و تسویه</span>
+                  </a>
+                  <a class="system-role-card" href="/app/forwarder" target="_blank" rel="noopener">
+                    <strong>فورواردر</strong><span>RFQ، ظرفیت و اجرای حمل</span>
+                  </a>
+                  <a class="system-role-card" href="/app/careers" target="_blank" rel="noopener">
+                    <strong>کریر</strong><span>ناوگان، راننده و تخصیص سفر</span>
+                  </a>
+                  <a class="system-role-card" href="/app/driver" target="_blank" rel="noopener">
+                    <strong>راننده</strong><span>مأموریت، GPS، POD و مدارک</span>
+                  </a>
+                  <a class="system-role-card" href="/app/agent" target="_blank" rel="noopener">
+                    <strong>نماینده مقصد</strong><span>تحویل، شواهد و مغایرت</span>
+                  </a>
+                  <a class="system-role-card" href="/admin/v2" target="_blank" rel="noopener">
+                    <strong>مدیریت سامانه</strong><span>KYC، ریسک، امنیت و حاکمیت</span>
+                  </a>
                 </div>
               </div>
             </div>
@@ -79,18 +89,37 @@
               <button class="menu-trigger" type="button" data-menu-trigger="featured" aria-expanded="false">
                 امکانات
               </button>
-              <div class="mega-menu" data-menu-panel="featured" hidden>
-                <div class="mega-column">
-                  <p class="menu-label">ابزارها</p>
-                  <a href="#calculator">محاسبه‌گر زمان و هزینه ترخیص</a>
-                  <a href="#features">تصمیم‌یار هوشمند گمرکی</a>
-                  <a href="#quote">گمرک در مسیر تحول دیجیتال</a>
+              <div class="mega-menu features-menu" data-menu-panel="featured" hidden>
+                <div class="features-menu-sidebar">
+                  <div class="mega-column">
+                    <p class="menu-label">امکانات سامانه</p>
+                    <a href="#platform">مدیریت محموله و اسناد</a>
+                    <a href="#features">تصمیم‌یار و کنترل ریسک</a>
+                    <a href="#calculator">محاسبه زمان و هزینه</a>
+                    <a href="#transport-operations">استعلام حمل و رهگیری</a>
+                    <a href="#contact">درخواست معرفی سامانه</a>
+                  </div>
+                  <div class="mega-column feature-problem-list">
+                    <p class="menu-label">مسئله‌ای که حل می‌کنیم</p>
+                    <a href="#transport-operations">راننده: بار برگشتی و زمان انتظار</a>
+                    <a href="#transport-operations">کریر: ظرفیت خالی و کنترل ناوگان</a>
+                    <a href="#transport-operations">فورواردر: قیمت‌گیری و پیگیری پراکنده</a>
+                  </div>
                 </div>
-                <div class="mega-column">
-                  <p class="menu-label">مزیت‌ها</p>
-                  <a href="#customers">تجربه کاربران</a>
-                  <a href="#quote">نگاه تخصصی به گمرک</a>
-                  <a href="#contact">درخواست معرفی سامانه</a>
+                <div class="comparison-menu-block" id="comparison-menu">
+                  <p class="menu-label">مقایسه رویکردها در بازار</p>
+                  <div class="comparison-table-wrap">
+                    <table class="comparison-table">
+                      <caption class="sr-only">مقایسه سامانه گمرک با راهکارهای داخلی جزیره‌ای و پلتفرم‌های بین‌المللی حمل</caption>
+                      <thead><tr><th scope="col">معیار</th><th scope="col">راهکارهای داخلی جزیره‌ای</th><th scope="col">پلتفرم‌های بین‌المللی حمل</th><th scope="col">سامانه گمرک</th></tr></thead>
+                      <tbody>
+                        <tr><th scope="row">پوشش زنجیره</th><td>معمولاً یک بخش</td><td>حمل بین‌المللی</td><td>حمل، گمرک و تحویل</td></tr>
+                        <tr><th scope="row">استعلام و قیمت</th><td>پیگیری تلفنی یا فایل</td><td>پیشنهادهای حمل عمومی</td><td>RFQ نسخه‌دار و قابل‌مقایسه</td></tr>
+                        <tr><th scope="row">بومی‌سازی</th><td>وابسته به راهکار</td><td>محدود برای مقررات ایران</td><td>نقش‌ها، اسناد و فرآیندهای بومی</td></tr>
+                        <tr><th scope="row">دید عملیاتی</th><td>گزارش‌های جدا</td><td>تمرکز بر حمل</td><td>وضعیت محموله تا ترخیص و تحویل</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
@@ -99,19 +128,27 @@
               <button class="menu-trigger" type="button" data-menu-trigger="resources" aria-expanded="false">
                 راهنما
               </button>
-              <div class="mega-menu" data-menu-panel="resources" hidden>
+              <div class="mega-menu guide-menu" data-menu-panel="resources" hidden>
                 <div class="mega-column">
-                  <p class="menu-label">راهنما</p>
-                  <a href="#features">کنترل هوشمند و بینایی ماشین</a>
-                  <a href="#calculator">محاسبه‌گر صرفه‌جویی عملیاتی</a>
+                  <p class="menu-label">راهنمای شروع</p>
+                  <a href="#why-terminal">سامانه گمرک چیست؟</a>
+                  <a href="#platform">از پذیرش تا ترخیص</a>
+                  <a href="#transport-operations">حمل بین‌المللی و گمرک</a>
                   <a href="#faq">پرسش‌های متداول</a>
-                  <a href="#contact">تماس با گمرک</a>
                 </div>
                 <div class="mega-column">
-                  <p class="menu-label">بیشتر بدانید</p>
-                  <a href="#platform">سامانه مدیریت عملیات گمرکی</a>
-                  <a href="#features">داشبورد دید عملیاتی</a>
-                  <a href="#pathways">چالش‌های رایج تشریفات گمرکی</a>
+                  <p class="menu-label">ماژول‌های عملیاتی</p>
+                  <a href="#platform">پذیرش و کنترل ورودی</a>
+                  <a href="#platform">اسناد و ارزیابی ریسک</a>
+                  <a href="#platform">محوطه، انبار و بارگیری</a>
+                  <a href="#features">داشبورد و تصمیم‌یار</a>
+                </div>
+                <div class="mega-column">
+                  <p class="menu-label">راهنمای نقش‌ها</p>
+                  <a href="#transport-operations">صاحب کالا و فورواردر</a>
+                  <a href="#transport-operations">کریر و راننده</a>
+                  <a href="#transport-operations">نماینده مقصد</a>
+                  <a href="#contact">راه‌اندازی و پشتیبانی</a>
                 </div>
               </div>
             </div>
@@ -144,6 +181,34 @@
           <a href="#calculator">محاسبه‌گر زمان و هزینه ترخیص</a>
           <a href="#customers">کاربران سامانه</a>
           <a href="#contact">ارتباط با ما</a>
+          <details class="mobile-menu-group">
+            <summary>سامانه · شش پنل</summary>
+            <div class="mobile-role-list">
+              <a href="/app/shipper" target="_blank" rel="noopener"><strong>صاحب کالا</strong><span>محموله، اسناد، رهگیری و تسویه</span></a>
+              <a href="/app/forwarder" target="_blank" rel="noopener"><strong>فورواردر</strong><span>RFQ، ظرفیت و اجرای حمل</span></a>
+              <a href="/app/careers" target="_blank" rel="noopener"><strong>کریر</strong><span>ناوگان، راننده و تخصیص سفر</span></a>
+              <a href="/app/driver" target="_blank" rel="noopener"><strong>راننده</strong><span>مأموریت، GPS، POD و مدارک</span></a>
+              <a href="/app/agent" target="_blank" rel="noopener"><strong>نماینده مقصد</strong><span>تحویل، شواهد و مغایرت</span></a>
+              <a href="/admin/v2" target="_blank" rel="noopener"><strong>مدیریت سامانه</strong><span>KYC، ریسک، امنیت و حاکمیت</span></a>
+            </div>
+          </details>
+          <details class="mobile-menu-group">
+            <summary>راهنمای سامانه</summary>
+            <div class="mobile-menu-links">
+              <a href="#why-terminal">سامانه گمرک چیست؟</a>
+              <a href="#platform">پذیرش، اسناد، انبار و ترخیص</a>
+              <a href="#transport-operations">حمل بین‌المللی و رهگیری</a>
+              <a href="#faq">پرسش‌های متداول</a>
+            </div>
+          </details>
+          <details class="mobile-menu-group">
+            <summary>امکانات و مقایسه</summary>
+            <div class="mobile-menu-links">
+              <a href="#transport-operations">مشکل راننده، کریر و فورواردر</a>
+              <a href="#comparison-table">مقایسه رویکردها در بازار</a>
+              <a href="#calculator">محاسبه زمان و هزینه ترخیص</a>
+            </div>
+          </details>
           <div class="mobile-panel-actions">
             <a class="lime-cta" href="#platform">معرفی سامانه</a>
             <a class="light-cta" href="#contact">درخواست مشاوره</a>
@@ -390,6 +455,52 @@
                   <div class="platform-card-copy"><p class="card-label">در کل فرآیند</p><h3>داشبورد یکپارچه برای تصمیم‌های گمرکی</h3><p>وضعیت گمرکات، پرونده‌ها و گلوگاه‌ها را در یک مرکز کنترل ببینید تا مدیران و تیم‌های عملیاتی تصمیم‌های دقیق‌تری بگیرند.</p><a href="#contact">بیشتر <span aria-hidden="true">↗</span></a></div>
                 </article>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="transport-section light-section reveal" id="transport-operations" aria-labelledby="transport-title">
+          <div class="section-wrap">
+            <div class="section-heading centered-heading">
+              <p class="eyebrow dark-eyebrow">حمل‌ونقل بین‌المللی و گمرک</p>
+              <h2 id="transport-title">یک زنجیره برای استعلام، حمل، ترخیص و تحویل</h2>
+              <p class="section-lead">سامانه گمرک فقط وضعیت ترخیص را نمایش نمی‌دهد؛ ظرفیت حمل، پیشنهاد قیمت، اسناد، نقاط کنترل و شواهد تحویل را به یک جریان نسخه‌دار وصل می‌کند تا هر نقش، فقط داده و اقدام مجاز خودش را ببیند.</p>
+            </div>
+            <div class="transport-role-grid">
+              <article class="transport-role-card">
+                <p class="card-label">برای راننده</p>
+                <h3>بار مناسب، مسیر روشن، انتظار کمتر</h3>
+                <p>فرصت‌های متناسب با نوع خودرو، ظرفیت، مسیر و زمان آزاد را دریافت می‌کند؛ مبلغ، خدمات، نقطه‌های عملیاتی و وضعیت پرداخت در یک پرونده قابل‌پیگیری ثبت می‌شود.</p>
+              </article>
+              <article class="transport-role-card">
+                <p class="card-label">برای کریر</p>
+                <h3>ظرفیت و ناوگان تحت کنترل</h3>
+                <p>ظرفیت خالی، مدارک راننده و خودرو، تخصیص سفر، آماده‌سازی، بارگیری، رهگیری و شواهد تحویل را بدون فایل‌های پراکنده و تماس‌های تکراری مدیریت می‌کند.</p>
+              </article>
+              <article class="transport-role-card">
+                <p class="card-label">برای فورواردر و صاحب کالا</p>
+                <h3>قیمت‌گیری قابل‌مقایسه و دید کامل</h3>
+                <p>استعلام را با اطلاعات کافی منتشر می‌کند، پیشنهادها را بر اساس مبلغ و خدمات مقایسه می‌کند و اثر زمان‌بندی گمرک، حمل و تحویل را در یک نمای واحد می‌بیند.</p>
+              </article>
+            </div>
+            <div class="transport-comparison" id="comparison-table">
+              <div class="transport-comparison-heading">
+                <div><p class="card-label">مقایسه شفاف رویکردها</p><h3>چه چیزی نسبت به ابزارهای جزیره‌ای بهتر می‌شود؟</h3></div>
+                <a class="card-cta" href="#contact">درخواست معرفی سامانه <span aria-hidden="true">↗</span></a>
+              </div>
+              <div class="comparison-table-wrap">
+                <table class="comparison-table comparison-table--large">
+                  <caption class="sr-only">مقایسه راهکارهای داخلی جزیره‌ای، پلتفرم‌های بین‌المللی حمل و سامانه گمرک</caption>
+                  <thead><tr><th scope="col">مسئله عملیاتی</th><th scope="col">راهکارهای داخلی جزیره‌ای</th><th scope="col">پلتفرم‌های بین‌المللی حمل</th><th scope="col">سامانه گمرک</th></tr></thead>
+                  <tbody>
+                    <tr><th scope="row">راننده و سفر برگشتی</th><td>اطلاعات بار و مسیر در کانال‌های جدا</td><td>تمرکز بر تخصیص حمل در شبکه خود</td><td>تطبیق ظرفیت، مسیر، زمان و اسناد در یک فرصت مجاز</td></tr>
+                    <tr><th scope="row">کریر و ظرفیت ناوگان</th><td>فایل، تماس و ثبت تکراری</td><td>داده وابسته به بازار یا کشور مقصد</td><td>ظرفیت، KYC، تخصیص، رهگیری و شواهد نسخه‌دار</td></tr>
+                    <tr><th scope="row">فورواردر و قیمت‌گیری</th><td>جمع‌آوری دستی پیشنهادها</td><td>قیمت عمومی با قواعد متفاوت</td><td>RFQ ساختاریافته، نسخه پیشنهاد و مقایسه خدمات</td></tr>
+                    <tr><th scope="row">گمرک و تحویل</th><td>اتصال محدود به عملیات حمل</td><td>پوشش متفاوت مقررات محلی</td><td>اتصال رویدادهای گمرک، حمل، اسناد و POD با کنترل نقش</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="comparison-note">این جدول مقایسه‌ی رویکرد و دامنه‌ی راهکارهاست، نه ادعای رتبه‌بندی یا تضمین قیمت در برابر یک برند مشخص؛ دامنه نهایی بر اساس فرآیند، اتصال‌ها و سیاست‌های هر سازمان تعیین می‌شود.</p>
             </div>
           </div>
         </section>

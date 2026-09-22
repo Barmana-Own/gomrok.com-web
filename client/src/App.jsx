@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { provinces } from './data/iranLocations.js';
 import PlatformWorkspace from './components/PlatformWorkspace.jsx';
+import CargoInquiryPage from './components/CargoInquiryPage.jsx';
 import { Icon, ProductLogo } from './components/ProductIcon.jsx';
 const AdminGovernancePanel = lazy(() => import('./components/AdminGovernancePanel.jsx'));
 
@@ -1120,6 +1121,7 @@ const DESIGN_PREVIEW_PANELS = [
 ];
 
 const DESIGN_PREVIEW_PUBLIC_SURFACES = [
+  { href: '/app/quote', title: 'استعلام قیمت حمل', description: 'فرم مشترک مهمان و عضو با دو مسیر پاسخ', icon: 'route' },
   { href: '/app', title: 'ورود اپ راننده', description: 'ورود یا ثبت‌نام از پایین صفحه', icon: 'driver' },
   { href: '/driver-login', title: 'ورود راننده', description: 'ورود به اپ عملیاتی', icon: 'driver' },
   { href: '/carrier-login', title: 'ورود شرکت حمل', description: 'ورود به پنل شرکت حمل‌ونقل', icon: 'fleet' },
@@ -1200,6 +1202,7 @@ export default function App() {
   const isCarrierRegisterPath = ['/app/careers/register', '/carrier-register'].includes(normalizedInitialPath);
   const isDriverRegisterPath = ['/app/driver/register', '/driver-register'].includes(normalizedInitialPath);
   const isAdminPath = ['/admin/v2', '/app/admin/v2'].includes(normalizedInitialPath);
+  const isCargoInquiryPath = ['/app/quote', '/app/inquiry'].includes(normalizedInitialPath);
   const isRoleSelectionPath = ['/app/select-role', '/select-role'].includes(normalizedInitialPath);
   const isLoginPath = ['/app', '/app/driver', '/app/careers', '/driver-login', '/carrier-login'].includes(normalizedInitialPath);
   const isProtectedPanelEntry = panelEntryRoute && !['driver', 'carrier', 'admin'].includes(panelEntryKey);
@@ -1308,6 +1311,8 @@ export default function App() {
   }, [hasRefreshToken, initialRole]);
 
   if (isDesignPreviewHub) return <DesignPreviewHub />;
+
+  if (isCargoInquiryPath) return <CargoInquiryPage apiUrl={API_URL} />;
 
   if (designPreviewRole) {
     return <PlatformWorkspace user={DESIGN_PREVIEW_USERS[designPreviewRole]} token="local-design-preview" apiUrl="" onLogout={() => { window.history.pushState({}, '', '/app'); window.location.reload(); }} />;

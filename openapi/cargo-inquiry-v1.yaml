@@ -1,0 +1,522 @@
+openapi: 3.0.3
+info:
+  title: Gomrok Shared Cargo Inquiry API
+  version: 1.0.0
+  license: { name: Proprietary, url: https://gomrok.org }
+  description: >-
+    Two-path cargo inquiry workflow. Automatic means driver publication and
+    offer collection; it is not an instant algorithmic price engine.
+servers:
+  - url: /app
+tags:
+  - name: Cargo inquiry
+    description: Versioned inquiry, ownership, publication, and selection workflow.
+  - name: Support
+    description: Guest support queue and response workflow.
+  - name: Driver market
+    description: Eligible driver projections and version-scoped offers.
+paths:
+  /api/cargo-inquiries/drafts:
+    post:
+      tags: [Cargo inquiry]
+      operationId: createCargoInquiryDraft
+      summary: Create a guest automatic-path draft
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CargoInquiryInput' }
+      responses:
+        '201': { description: Draft created with a continuation token, content: { application/json: { schema: { $ref: '#/components/schemas/DraftResponse' } } } }
+        '413': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/draft:
+    patch:
+      tags: [Cargo inquiry]
+      operationId: updateGuestCargoInquiryDraft
+      summary: Append a new guest draft version
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/ContinuationToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CargoInquiryInput' }
+      responses:
+        '200': { description: Version appended }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/status:
+    get:
+      tags: [Cargo inquiry]
+      operationId: getGuestCargoInquiryStatus
+      summary: Read guest-safe inquiry status
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/GuestAccessToken'
+      responses:
+        '200': { description: Guest-safe status }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/validate:
+    get:
+      tags: [Cargo inquiry]
+      operationId: validateGuestCargoInquiry
+      summary: Validate the current guest inquiry version
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/GuestAccessToken'
+      responses:
+        '200': { description: Validation result and publication decision }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/auth-handoff:
+    post:
+      tags: [Cargo inquiry]
+      operationId: createCargoInquiryAuthHandoff
+      summary: Confirm one-time guest-to-account handoff
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/GuestAccessToken'
+      responses:
+        '200': { description: Authenticated continuation target }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/support:
+    post:
+      tags: [Support]
+      operationId: submitCargoInquiryToSupport
+      summary: Submit a guest inquiry to the support queue
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CargoInquiryInput' }
+      responses:
+        '201': { description: Queued with tracking code }
+        '413': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/support/queue:
+    get:
+      tags: [Support]
+      operationId: listCargoInquirySupportQueue
+      summary: List support inquiries for an authorized support operator
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200': { description: Support queue items }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/support/{publicId}/assign:
+    post:
+      tags: [Support]
+      operationId: assignCargoInquirySupportCase
+      summary: Assign a support inquiry to the current authorized operator
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: Support inquiry assigned }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/support/{publicId}/respond:
+    post:
+      tags: [Support]
+      operationId: respondToCargoInquirySupportCase
+      summary: Record one or more support-provided price responses
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prices]
+              properties:
+                prices:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items: { $ref: '#/components/schemas/SupportPrice' }
+      responses:
+        '200': { description: Support response recorded }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/support/{publicId}/quote:
+    post:
+      tags: [Support]
+      operationId: recordCargoInquirySupportQuote
+      summary: Compatibility alias for recording support quotes
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SupportQuoteInput' }
+      responses:
+        '200': { description: Support response recorded }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/support/{publicId}/quotes:
+    get:
+      tags: [Support]
+      operationId: listCargoInquirySupportQuotes
+      summary: List versioned support quotes
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PublicId' }]
+      responses:
+        '200': { description: Support quote history }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/support/{publicId}/request-info:
+    post:
+      tags: [Support]
+      operationId: requestCargoInquiryInformation
+      summary: Request missing information from the customer
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PublicId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties: { message: { type: string, minLength: 1, maxLength: 2000 } }
+      responses:
+        '200': { description: Information request recorded }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/support/{publicId}/approve-risk:
+    post:
+      tags: [Support]
+      operationId: approveCargoInquiryRisk
+      summary: Record specialist risk approval or rejection
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PublicId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approved]
+              properties: { approved: { type: boolean }, note: { type: string, maxLength: 1000 } }
+      responses:
+        '200': { description: Risk decision recorded }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/support/{publicId}/send-to-customer:
+    post:
+      tags: [Support]
+      operationId: queueCargoInquiryCustomerNotification
+      summary: Queue configured notification delivery without claiming delivery
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PublicId' }]
+      responses:
+        '200': { description: Notification delivery queued or pending provider configuration }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/continue:
+    post:
+      tags: [Cargo inquiry]
+      operationId: bindCargoInquiryToShipper
+      summary: Bind a guest draft to the authenticated shipper organization
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/ContinuationToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: Guest continuation revoked and ownership bound }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/submit-automatic:
+    post:
+      tags: [Cargo inquiry]
+      operationId: publishCargoInquiryAutomatically
+      summary: Revalidate and publish the current inquiry version
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { description: Published to eligible drivers }
+        '200': { description: Held for specialist or scope review }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/submit:
+    post:
+      tags: [Cargo inquiry]
+      operationId: publishCargoInquiryCompatibilityAlias
+      summary: Compatibility alias for automatic publication
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: Held for review or completion }
+        '201': { description: Published to eligible drivers }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries:
+    get:
+      tags: [Cargo inquiry]
+      operationId: listOwnedCargoInquiries
+      summary: List inquiries owned by the caller organization
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Organization-scoped inquiry list }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/driver/opportunities:
+    get:
+      tags: [Driver market]
+      operationId: listDriverCargoOpportunities
+      summary: List eligible driver opportunities using a privacy-safe projection
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: 'Eligible published inquiries without exact address, contact, value, or budget' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/offers:
+    get:
+      tags: [Driver market]
+      operationId: listCargoInquiryOffers
+      summary: List offers for the owning shipper's current inquiry version
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PublicId' }]
+      responses:
+        '200': { description: Current-version offers }
+        '403': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [Driver market]
+      operationId: submitCargoInquiryOffer
+      summary: Submit or update one eligible driver's offer
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OfferInput' }
+      responses:
+        '201': { description: Offer created }
+        '200': { description: Existing active offer updated }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/select-offer:
+    post:
+      tags: [Cargo inquiry]
+      operationId: selectCargoInquiryOffer
+      summary: Select exactly one current-version offer with row locks
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [offerId]
+              properties:
+                offerId: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: Selected offer and expired competing active offers }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/documents/init:
+    post:
+      tags: [Cargo inquiry]
+      operationId: initializeCargoInquiryDocument
+      summary: Initialize private document upload
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - $ref: '#/components/parameters/GuestAccessTokenOptional'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DocumentInput' }
+      responses:
+        '201': { description: Upload initialized after private storage and scan policy checks }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/documents/{documentId}/complete:
+    post:
+      tags: [Cargo inquiry]
+      operationId: completeCargoInquiryDocument
+      summary: Complete a scanned private document upload
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: Document accepted after scan verification }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /api/cargo-inquiries/{publicId}/documents/{documentId}:
+    get:
+      tags: [Cargo inquiry]
+      operationId: getCargoInquiryDocument
+      summary: Get an authorized time-limited private document link
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: Authorized time-limited document URL }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [Cargo inquiry]
+      operationId: deleteCargoInquiryDocument
+      summary: Delete a private document reference
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PublicId'
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '204': { description: Document reference deleted }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+components:
+  parameters:
+    PublicId:
+      name: publicId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, maxLength: 180 }
+    ContinuationToken:
+      name: X-Continuation-Token
+      in: header
+      required: true
+      schema: { type: string, minLength: 20 }
+    GuestAccessToken:
+      name: X-Guest-Access-Token
+      in: header
+      required: true
+      schema: { type: string, minLength: 20 }
+    GuestAccessTokenOptional:
+      name: X-Guest-Access-Token
+      in: header
+      required: false
+      schema: { type: string, minLength: 20 }
+  responses:
+    Problem:
+      description: Safe problem response with correlation ID
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    CargoInquiryInput:
+      type: object
+      required: [requester, contact, stops, schedule, cargo, vehicle]
+      properties:
+        formVersion: { type: string, maxLength: 16, default: v2 }
+        requester: { type: object, required: [name, mobile], properties: { name: { type: string, minLength: 1, maxLength: 180 }, mobile: { type: string, minLength: 7, maxLength: 32 }, email: { type: string, format: email } } }
+        contact: { type: object, required: [channel], properties: { channel: { type: string, enum: [phone, sms, email] }, timeWindow: { type: string } } }
+        route: { type: object, properties: { scope: { type: string }, extraStops: { type: array, maxItems: 8, items: { $ref: '#/components/schemas/Stop' } } } }
+        stops: { type: array, minItems: 2, maxItems: 10, items: { $ref: '#/components/schemas/Stop' } }
+        schedule: { type: object, required: [pickupFrom, quoteDeadline], properties: { readyStatus: { type: string }, pickupFrom: { type: string, format: date-time }, pickupTo: { type: string, format: date-time }, quoteDeadline: { type: string, format: date-time }, timezone: { type: string } } }
+        cargo: { type: object, required: [title, description], properties: { title: { type: string, maxLength: 180 }, cargoType: { type: string, maxLength: 80 }, description: { type: string, maxLength: 1000 }, descriptionPublic: { type: string, maxLength: 600 }, descriptionPrivate: { type: string, maxLength: 1600 }, condition: { type: string }, totalGrossWeight: { type: number, minimum: 0 }, weightUnit: { type: string, enum: [kg, ton] }, totalVolume: { type: number, minimum: 0 }, volumeUnit: { type: string, enum: [m3, l] }, specialFlags: { type: array, items: { type: string } }, specialRequirements: { type: object, additionalProperties: true }, temperature: { $ref: '#/components/schemas/Temperature' } } }
+        handlingUnits: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/HandlingUnit' } }
+        vehicle: { type: object, required: [preferenceMode], properties: { preferenceMode: { type: string }, class: { type: string }, body: { type: string }, count: { type: integer, minimum: 1 }, requiredEquipment: { type: array, items: { type: string } } } }
+        documents: { type: array, maxItems: 30, items: { $ref: '#/components/schemas/DocumentInput' } }
+        payer: { type: object, properties: { type: { type: string }, name: { type: string }, mobile: { type: string }, organizationId: { type: string } } }
+        value: { type: object, properties: { amountMinor: { type: integer, minimum: 0 }, amount: { type: number }, currency: { type: string, minLength: 3, maxLength: 3 }, budgetAmount: { type: number }, budgetCurrency: { type: string, minLength: 3, maxLength: 3 }, insuranceRequested: { type: boolean } } }
+        consent: { type: object, properties: { shareWithDrivers: { type: boolean }, dataAccuracy: { type: boolean }, prohibitedGoods: { type: boolean }, contractNotFinal: { type: boolean }, priceMayChange: { type: boolean }, contactPermission: { type: boolean } } }
+    Stop:
+      type: object
+      required: [operation, country, city]
+      properties: { operation: { type: string }, country: { type: string }, city: { type: string }, district: { type: string }, placeType: { type: string }, address: { type: string, maxLength: 500 } }
+    HandlingUnit:
+      type: object
+      required: [quantity, weightBasis]
+      properties: { quantity: { type: integer, minimum: 1 }, weightBasis: { type: string, enum: [per_unit, total_row] }, grossWeight: { type: number, minimum: 0 }, weightUnit: { type: string }, length: { type: number, minimum: 0.000001 }, width: { type: number, minimum: 0.000001 }, height: { type: number, minimum: 0.000001 }, dimensionUnit: { type: string } }
+    Temperature:
+      type: object
+      required: [minC, maxC]
+      properties: { minC: { type: number }, maxC: { type: number }, setpointC: { type: number }, rangeSource: { type: string } }
+    OfferInput:
+      type: object
+      required: [currency, validUntil]
+      properties: { amountMinor: { type: integer, minimum: 1 }, amount: { type: number, minimum: 0.000001 }, currency: { type: string, pattern: '^[A-Z]{3}$' }, validUntil: { type: string, format: date-time }, basis: { type: string }, components: { type: object, additionalProperties: { type: integer } }, included: { type: string }, excluded: { type: string }, includedServices: { type: array, items: { type: string } }, excludedServices: { type: array, items: { type: string } }, conditions: { type: string }, driverNote: { type: string }, estimatedArrivalMinutes: { type: integer, minimum: 0 }, vehicleId: { type: integer, minimum: 1 }, loadingIncluded: { type: boolean }, unloadingIncluded: { type: boolean } }
+    SupportPrice:
+      type: object
+      required: [source, amount, currency, validUntil]
+      properties: { source: { type: string, maxLength: 120 }, amount: { type: number, minimum: 0.000001 }, currency: { type: string, pattern: '^[A-Z]{3}$' }, scope: { type: string, maxLength: 300 }, validUntil: { type: string, format: date-time }, conditions: { type: string, maxLength: 500 } }
+    SupportQuoteInput:
+      type: object
+      properties:
+        prices:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { $ref: '#/components/schemas/SupportPrice' }
+        amountMinor: { type: integer, minimum: 1 }
+        amount: { type: number, minimum: 0.000001 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        validUntil: { type: string, format: date-time }
+        includedServices: { type: array, items: { type: string } }
+        excludedServices: { type: array, items: { type: string } }
+    DocumentInput:
+      type: object
+      required: [originalName, mimeType, sizeBytes]
+      properties:
+        documentType: { type: string, maxLength: 60 }
+        originalName: { type: string, maxLength: 180 }
+        mimeType: { type: string, maxLength: 120 }
+        sizeBytes: { type: integer, minimum: 1 }
+        visibility: { type: string, enum: [PRIVATE] }
+    DraftResponse:
+      type: object
+      required: [inquiry, continuationToken]
+      properties: { inquiry: { type: object }, continuationRequired: { type: boolean }, continuationToken: { type: string }, review: { type: object } }
+    Problem:
+      type: object
+      required: [title, status, code]
+      properties: { type: { type: string, format: uri }, title: { type: string }, status: { type: integer }, detail: { type: string }, code: { type: string }, correlationId: { type: string }, details: { type: object, additionalProperties: true } }
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
