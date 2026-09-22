@@ -17,8 +17,8 @@ export const metadata: Metadata = {
   description:
     "سامانه‌ای هوشمند برای مدیریت تشریفات گمرکی، کنترل جریان کالا، ارزیابی ریسک و تسریع ترخیص با دید لحظه‌ای و داده‌های یکپارچه.",
   icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
+    icon: "/icon.jpg",
+    shortcut: "/icon.jpg",
   },
 };
 

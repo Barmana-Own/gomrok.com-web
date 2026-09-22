@@ -83,9 +83,8 @@ button { cursor: pointer; }
   box-shadow: 0 18px 50px rgba(2, 19, 18, .13);
   backdrop-filter: blur(18px);
 }
-.brand { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; font-size: 1.25rem; font-weight: var(--font-weight-button); letter-spacing: 0; }
-.brand-mark { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 5px; background: var(--white); color: var(--ink); font-size: 1.0625rem; font-weight: var(--font-weight-hero-title); line-height: 1; }
-.brand-name { white-space: nowrap; }
+.brand { display: inline-flex; align-items: center; flex: 0 0 auto; }
+.brand-logo { display: block; width: 72px; height: 72px; object-fit: cover; border: 2px solid rgba(157,255,37,.8); border-radius: 50%; box-shadow: 0 8px 22px rgba(2,19,18,.2); }
 .desktop-nav { display: flex; align-items: center; gap: 5px; flex: 1 1 auto; }
 .nav-link, .menu-trigger { padding: 11px 9px; color: rgba(255,255,255,.88); font-size: var(--font-size-navigation); font-weight: var(--font-weight-navigation); line-height: var(--line-height-navigation); letter-spacing: 0; border: 0; background: transparent; white-space: nowrap; }
 .menu-trigger { display: inline-flex; align-items: center; gap: 6px; }
@@ -212,8 +211,8 @@ button { cursor: pointer; }
 .roi-form h3 { margin: 0 0 36px; font-size: 1.35rem; font-weight: var(--font-weight-card-title); letter-spacing: -.01em; line-height: 1.55; }
 .input-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px 26px; }
 .input-grid label, .contact-form label { position: relative; display: grid; gap: 8px; color: #66716e; font-size: var(--font-size-label); font-weight: var(--font-weight-button); line-height: var(--line-height-label); letter-spacing: 0; }
-.input-grid input, .contact-form input, .contact-form select, #roi-email { width: 100%; min-height: 44px; padding: 4px 0 11px; border: 0; border-bottom: 1px solid rgba(6,42,40,.22); border-radius: 0; outline: 0; background: transparent; color: var(--ink); }
-.input-grid input:focus, .contact-form input:focus, .contact-form select:focus, #roi-email:focus { border-bottom-color: var(--ink); box-shadow: 0 2px 0 var(--lime); }
+.input-grid input, .contact-form input, .contact-form select { width: 100%; min-height: 44px; padding: 4px 0 11px; border: 0; border-bottom: 1px solid rgba(6,42,40,.22); border-radius: 0; outline: 0; background: transparent; color: var(--ink); }
+.input-grid input:focus, .contact-form input:focus, .contact-form select:focus { border-bottom-color: var(--ink); box-shadow: 0 2px 0 var(--lime); }
 .wide-field { grid-column: 1 / -1; }
 .currency-prefix { position: absolute; bottom: 13px; left: 0; }
 .currency-prefix + input { padding-left: 20px; }
@@ -235,14 +234,20 @@ button { cursor: pointer; }
 .savings-list dt { color: rgba(249,250,246,.9); font-size: var(--font-size-body); font-weight: var(--font-weight-regular); line-height: var(--line-height-body); }
 .savings-list dt small { color: rgba(249,250,246,.56); font-size: var(--font-size-label); font-weight: var(--font-weight-regular); line-height: var(--line-height-label); }
 .savings-list dd { margin: 0; color: var(--white); font: var(--font-weight-navigation) var(--font-size-body)/var(--line-height-body) var(--font-family); letter-spacing: 0; white-space: nowrap; }
-.roi-capture { margin-top: 34px; padding: 25px 27px; border-radius: 14px; background: rgba(170,191,186,.19); }
-.roi-capture h3 { margin: 0 0 8px; font-size: 1.35rem; font-weight: var(--font-weight-card-title); letter-spacing: -.01em; line-height: 1.55; }
-.roi-capture p { margin: 0 0 20px; color: rgba(249,250,246,.58); font-size: var(--font-size-body); font-weight: var(--font-weight-regular); line-height: var(--line-height-body); letter-spacing: 0; }
-#roi-email { color: var(--white); border-bottom-color: rgba(249,250,246,.4); }
-#roi-email::placeholder { color: rgba(249,250,246,.55); }
-#roi-email:focus { border-bottom-color: var(--lime); }
-#roi-email-form { display: grid; grid-template-columns: 1fr auto; gap: 13px; align-items: end; }
-#roi-email-form button { min-height: 43px; padding: 10px 17px; border: 0; border-radius: 8px; background: var(--lime); color: var(--ink); font-size: var(--font-size-button); font-weight: var(--font-weight-button); line-height: var(--line-height-button); letter-spacing: 0; text-transform: none; }
+.roi-inquiry-actions { margin-top: 34px; padding: 25px 27px; border: 1px solid rgba(157,255,37,.12); border-radius: 14px; background: rgba(170,191,186,.19); }
+.roi-inquiry-actions .result-kicker { margin-bottom: 8px; color: var(--lime); }
+.roi-inquiry-copy { margin: 0 0 18px; color: rgba(249,250,246,.72); font-size: var(--font-size-body); font-weight: var(--font-weight-regular); line-height: var(--line-height-body); letter-spacing: 0; }
+.roi-inquiry-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.roi-inquiry-button { display: inline-flex; min-height: 86px; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 13px; border: 1px solid rgba(157,255,37,.34); border-radius: 9px; background: rgba(255,255,255,.08); color: var(--white); font-size: var(--font-size-button); font-weight: var(--font-weight-button); line-height: var(--line-height-button); letter-spacing: 0; text-align: right; text-decoration: none; transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .2s ease; }
+.roi-inquiry-button__copy { display: grid; gap: 5px; min-width: 0; }
+.roi-inquiry-button__copy strong { color: inherit; font-size: var(--font-size-button); font-weight: var(--font-weight-button); line-height: var(--line-height-button); }
+.roi-inquiry-button__copy small { color: rgba(249,250,246,.66); font-size: var(--font-size-label); font-weight: var(--font-weight-regular); line-height: var(--line-height-label); }
+.roi-inquiry-button:hover { border-color: var(--lime); background: rgba(157,255,37,.13); color: var(--white); transform: translateY(-1px); }
+.roi-inquiry-button:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+.roi-inquiry-button--primary { border-color: var(--lime); background: var(--lime); color: var(--ink); }
+.roi-inquiry-button--primary:hover { background: #b8ff5d; color: var(--ink); }
+.roi-inquiry-button--primary .roi-inquiry-button__copy small { color: rgba(6,42,40,.72); }
+.roi-inquiry-note { display: block; margin-top: 13px; color: rgba(249,250,246,.56); font-size: var(--font-size-label); font-weight: var(--font-weight-regular); line-height: var(--line-height-label); }
 .form-message { min-height: 20px; margin: 12px 0 0; font-size: var(--font-size-label); font-weight: var(--font-weight-button); line-height: var(--line-height-label); letter-spacing: 0; }
 .form-message.is-success { color: var(--lime) !important; }
 .form-message.is-error { color: #ffb9a9 !important; }
@@ -382,17 +387,14 @@ button { cursor: pointer; }
 .footer-cta-block h2 { margin: 0; font-size: clamp(2rem, 3.6vw, 3rem); font-weight: var(--font-weight-section-title); letter-spacing: -.025em; line-height: 1.3; }
 .footer-cta { min-width: 290px; margin-top: 58px; background: rgba(154,190,184,.22); color: var(--lime); }
 .footer-grid { display: grid; grid-template-columns: 1.25fr 1fr 1fr 1.3fr; gap: 36px; margin-top: 237px; }
-.footer-brand { color: var(--white); font-size: 1.5rem; font-weight: var(--font-weight-button); line-height: 1.55; letter-spacing: 0; }
-.footer-brand-mark { width: 35px; height: 35px; color: var(--lime); }
-.market-guide { display: grid; gap: 15px; margin: 46px 0 0; color: rgba(249,250,246,.65); font-size: var(--font-size-body); font-weight: var(--font-weight-regular); line-height: var(--line-height-body); letter-spacing: 0; }
-.gartner-wordmark { color: var(--white); font-size: 2rem; font-weight: var(--font-weight-button); letter-spacing: 0; line-height: 1.2; }
-.gartner-wordmark sup { margin-left: 2px; font-size: var(--font-size-label); letter-spacing: 0; vertical-align: top; }
+.footer-brand-line { display: flex; align-items: center; justify-content: flex-start; gap: 18px; }
+.footer-brand { display: inline-flex; flex: 0 0 auto; color: var(--white); }
+.footer-brand-logo { display: block; width: 92px; height: 92px; object-fit: cover; border: 2px solid rgba(157,255,37,.7); border-radius: 50%; box-shadow: 0 12px 30px rgba(2,19,18,.26); }
+.footer-brand-title { max-width: 190px; color: var(--white); font-size: 1.25rem; font-weight: var(--font-weight-button); line-height: 1.7; }
 .footer-column { display: grid; align-content: start; gap: 11px; }
 .footer-column > a { color: rgba(249,250,246,.82); font-size: var(--font-size-navigation); font-weight: var(--font-weight-navigation); line-height: var(--line-height-navigation); letter-spacing: 0; }
-.footer-column > a:hover, .social-links a:hover { color: var(--lime); }
+.footer-column > a:hover { color: var(--lime); }
 .footer-column > p:not(.footer-label) { margin: 0; color: rgba(249,250,246,.35); font-size: var(--font-size-body); font-weight: var(--font-weight-regular); line-height: var(--line-height-body); letter-spacing: 0; }
-.social-links { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
-.social-links a { color: rgba(249,250,246,.62); font: var(--font-weight-button) var(--font-size-label)/var(--line-height-label) var(--font-family); letter-spacing: 0; text-transform: none; }
 .footer-bottom { display: flex; justify-content: space-between; gap: 18px; margin-top: 88px; padding-top: 17px; border-top: 1px solid rgba(249,250,246,.12); color: rgba(249,250,246,.4); font-size: var(--font-size-label); font-weight: var(--font-weight-regular); line-height: var(--line-height-label); letter-spacing: 0; }
 .footer-bottom a:hover { color: var(--lime); }
 
@@ -416,8 +418,7 @@ button { cursor: pointer; }
   body { font-size: .95rem; line-height: 1.9; }
   .site-header { inset: 12px 0 auto; }
   .nav-shell { min-height: 58px; padding: 9px 13px; border-radius: 9px; }
-  .brand { font-size: 1.1875rem; }
-  .brand-mark { width: 22px; height: 22px; }
+  .brand-logo { width: 56px; height: 56px; }
   .desktop-nav, .header-actions { display: none; }
   .mobile-menu-button { display: block; }
   .hero-scroll { min-height: 300vh; }
@@ -443,6 +444,11 @@ button { cursor: pointer; }
   .roi-total strong { font-size: clamp(50px, 14vw, 74px); }
   .savings-list dt { font-size: .95rem; line-height: 1.9; }
   .savings-list dd { font-size: .95rem; line-height: 1.9; }
+  .roi-inquiry-actions { margin-top: 28px; padding: 21px 18px; }
+  .roi-inquiry-buttons { grid-template-columns: 1fr; gap: 11px; }
+  .roi-inquiry-button { min-height: 78px; }
+  .roi-inquiry-button__copy strong { font-size: .88rem; }
+  .roi-inquiry-button__copy small { font-size: .72rem; line-height: 1.75; }
   .why-section { padding-block: 70px 76px; }
   .why-section h2, .industry-intro h2 { font-size: clamp(1.7rem, 7vw, 2.2rem); line-height: 1.4; }
   .features-section { padding-top: 20px; }
@@ -490,6 +496,9 @@ button { cursor: pointer; }
   .footer-cta-block h2 { font-size: clamp(1.7rem, 7vw, 2.2rem); line-height: 1.4; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 46px 22px; margin-top: 85px; }
   .footer-brand-block { grid-column: 1 / -1; }
+  .footer-brand-line { justify-content: flex-start; gap: 14px; }
+  .footer-brand-logo { width: 78px; height: 78px; }
+  .footer-brand-title { max-width: 220px; font-size: 1.05rem; }
   .footer-bottom { flex-direction: column; margin-top: 65px; }
 }
 
@@ -546,7 +555,7 @@ html[dir="rtl"] .hero-beat-copy h2 { font-family: var(--font-family); }
 html[dir="rtl"] .section-lead,
 html[dir="rtl"] .section-heading > p:not(.eyebrow),
 html[dir="rtl"] .product-card p:not(.card-label),
-html[dir="rtl"] .roi-capture p,
+html[dir="rtl"] .roi-inquiry-copy,
 html[dir="rtl"] .contact-copy > p:not(.trusted-copy),
 html[dir="rtl"] .faq-intro p,
 html[dir="rtl"] .faq-answer { line-height: var(--line-height-body); }
@@ -573,7 +582,7 @@ html[dir="rtl"] .light-cta,
 html[dir="rtl"] .footer-cta,
 html[dir="rtl"] .card-cta,
 html[dir="rtl"] .form-submit,
-html[dir="rtl"] #roi-email-form button { letter-spacing: 0; text-transform: none; }
+html[dir="rtl"] .roi-inquiry-button { letter-spacing: 0; text-transform: none; }
 
 .hero-canvas,
 .hero-frame-poster,

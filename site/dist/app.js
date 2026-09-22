@@ -536,21 +536,6 @@
     element.classList.remove("is-success", "is-error");
     if (type) element.classList.add(type);
   }
-  var roiEmailForm = document.getElementById("roi-email-form");
-  if (roiEmailForm) {
-    roiEmailForm.addEventListener("submit", function (event) {
-      event.preventDefault();
-      var email = document.getElementById("roi-email");
-      var message = document.getElementById("roi-message");
-      if (!email || !email.checkValidity()) {
-        showMessage(message, "یک ایمیل کاری معتبر وارد کنید.", "is-error");
-        if (email) email.focus();
-        return;
-      }
-      showMessage(message, "این نسخه‌ی نمایشی محلی است و اطلاعات فرم را ارسال نمی‌کند.", "is-success");
-      roiEmailForm.reset();
-    });
-  }
 
   var contactForm = document.getElementById("contact-form");
   if (contactForm) {

@@ -16,8 +16,8 @@
     <div class="site-shell">
       <header class="site-header" data-site-header>
         <div class="nav-shell">
-          <a class="brand" href="#top" aria-label="صفحه اصلی گمرک">
-            <span class="brand-name">گمرک</span>
+          <a class="brand" href="#top" aria-label="صفحه اصلی GOMROK">
+            <img class="brand-logo" src="./images/gomrok-logo.jpg" width="72" height="72" alt="GOMROK" />
           </a>
 
           <nav class="desktop-nav" aria-label="پیمایش اصلی">
@@ -348,15 +348,26 @@
                   <div><dt>کاهش هزینه‌ی جابه‌جایی و هدایت <small>(خودروها و تجهیزات)</small></dt><dd id="roi-spotter">۱۹۳٬۲۴۸ تومان</dd></div>
                   <div><dt>کاهش هزینه‌ی توقف و انبارداری</dt><dd id="roi-detention">۱۹۲٬۸۵۰ تومان</dd></div>
                 </dl>
-                <div class="roi-capture">
-                  <h3>گزارش دقیق‌تری می‌خواهید؟</h3>
-                  <p>ایمیل کاری خود را وارد کنید تا یکی از کارشناسان گمرکی ما، برآورد اختصاصی زمان و هزینه‌ی فرآیند شما را آماده کند.</p>
-                  <form id="roi-email-form">
-                    <label class="sr-only" for="roi-email">ایمیل کاری</label>
-                    <input id="roi-email" type="email" placeholder="name@company.com" autocomplete="email" required />
-                    <button type="submit">ارسال</button>
-                  </form>
-                  <p class="form-message" id="roi-message" aria-live="polite"></p>
+                <div class="roi-inquiry-actions" aria-labelledby="roi-inquiry-title">
+                  <p class="result-kicker" id="roi-inquiry-title">استعلام حمل بار</p>
+                  <p class="roi-inquiry-copy">برای ثبت اطلاعات واقعی بار، مسیر و شرایط حمل، یکی از دو مسیر رسمی استعلام را انتخاب کنید.</p>
+                  <div class="roi-inquiry-buttons">
+                    <a class="roi-inquiry-button roi-inquiry-button--primary" href="/app/quote">
+                      <span class="roi-inquiry-button__copy">
+                        <strong>استعلام قیمت از رانندگان</strong>
+                        <small>پیشنهادهای قیمت در پنل صاحب بار نمایش داده می‌شود.</small>
+                      </span>
+                      <span aria-hidden="true">↗</span>
+                    </a>
+                    <a class="roi-inquiry-button" href="/app/quote">
+                      <span class="roi-inquiry-button__copy">
+                        <strong>درخواست استعلام از پشتیبانی</strong>
+                        <small>کارشناس، اطلاعات بار را بررسی و نتیجه را اعلام می‌کند.</small>
+                      </span>
+                      <span aria-hidden="true">↗</span>
+                    </a>
+                  </div>
+                  <small class="roi-inquiry-note">فرم جامع استعلام، جزئیات مسیر، بار و خدمات جانبی را دریافت می‌کند؛ قیمت نهایی پس از بررسی اطلاعات و شرایط حمل مشخص می‌شود.</small>
                 </div>
               </aside>
             </div>
@@ -628,13 +639,12 @@
           </div>
           <div class="footer-grid">
             <div class="footer-brand-block">
-              <a class="brand footer-brand" href="#top" aria-label="صفحه اصلی گمرک">
-                <svg class="footer-brand-mark" viewBox="0 0 48 49" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M9.16512 0C8.26239 0 7.39524 0.369725 6.75488 1.02245L1.00056 6.92436C0.360201 7.58165 0 8.47629 0 9.40289V48.0871C0 48.5892 0.400223 49 0.889385 49H34.3481C35.2508 49 36.1179 48.6303 36.7583 47.973L46.7416 37.7211C47.382 37.0684 47.7422 36.1737 47.7422 35.2471V0.912902C47.7422 0.410806 47.342 0 46.8528 0H9.16512ZM40.9206 16.0123C40.9206 16.8339 40.2714 17.5003 39.4709 17.5003H22.1324C21.3586 17.5003 20.6604 18.1531 20.6827 18.9473C20.696 19.2942 20.8339 19.6137 21.0518 19.8556C21.074 19.8784 21.0918 19.9013 21.1185 19.9241L28.5626 27.5696C28.8339 27.8481 28.9895 28.2269 28.9895 28.6195V40.5191C28.9895 41.3408 28.3403 42.0072 27.5398 42.0072H20.2068C19.4064 42.0072 18.7571 41.3408 18.7571 40.5191V18.9929C18.7571 18.1713 18.1079 17.5049 17.3074 17.5049H8.27128C7.47084 17.5049 6.82159 16.8385 6.82159 16.0169V8.48999C6.82159 7.66838 7.47084 7.00196 8.27128 7.00196H18.1568C18.5437 7.00196 18.9128 7.15715 19.184 7.44015L26.6149 15.0674C26.6415 15.0994 26.6771 15.1359 26.7082 15.1633C26.9306 15.3733 27.224 15.5056 27.5487 15.5285C28.3403 15.5741 28.9895 14.8529 28.9895 14.0404V8.49455C28.9895 7.67294 29.6388 7.00652 30.4392 7.00652H39.4754C40.2758 7.00652 40.9251 7.67294 40.9251 8.49455V16.0214L40.9206 16.0123Z" fill="currentColor" />
-                </svg>
-                <span class="brand-name">گمرک</span>
-              </a>
-              <p class="market-guide"><span class="gartner-wordmark">گمرک</span><span>مدیریت یکپارچه<br />اسناد و محموله‌ها<br />برای تجارت شفاف</span></p>
+              <div class="footer-brand-line">
+                <a class="brand footer-brand" href="#top" aria-label="صفحه اصلی سامانه حمل و نقل گمرکات">
+                  <img class="footer-brand-logo" src="./images/gomrok-logo.jpg" width="82" height="82" alt="لوگوی سامانه حمل و نقل گمرکات" />
+                </a>
+                <span class="footer-brand-title">سامانه حمل و نقل گمرکات</span>
+              </div>
             </div>
             <div class="footer-column">
               <p class="footer-label">سامانه</p>
@@ -654,11 +664,6 @@
               <a href="#contact">برای گمرکی شفاف‌تر آماده‌اید؟</a>
               <a href="#contact">تماس با کارشناسان</a>
               <p>همین امروز درباره‌ی فرآیندهای گمرکی خود گفت‌وگو کنید.</p>
-              <div class="social-links">
-                <a href="https://www.linkedin.com/company/terminal-industries/" target="_blank" rel="noreferrer">LinkedIn</a>
-                <a href="https://x.com/Terminal_Indust" target="_blank" rel="noreferrer">X</a>
-                <a href="https://www.youtube.com/@Terminal-Industries" target="_blank" rel="noreferrer">YouTube</a>
-              </div>
             </div>
           </div>
           <div class="footer-bottom">

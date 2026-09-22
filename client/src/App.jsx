@@ -225,7 +225,7 @@ async function apiRequest(path, options = {}) {
 }
 
 function Brand({ variant = 'default' }) {
-  return <div className={`brand${variant === 'welcome' ? ' brand--welcome' : ''}`}><ProductLogo subtitle="شبکه هوشمند حمل‌ونقل و گمرک" /></div>;
+  return <div className={`brand${variant === 'welcome' ? ' brand--welcome' : ''}`}><ProductLogo subtitle="شبکه هوشمند حمل‌ونقل" /></div>;
 }
 
 function FormIcon({ name }) {
@@ -422,7 +422,7 @@ function RoleSelectionPage({ onDriverLogin, onCarrierLogin }) {
   );
 }
 
-function OrganizationLoginPage({ panel, panelKey, onBack, onLoggedIn }) {
+function OrganizationLoginPage({ panel, panelKey, onLoggedIn }) {
   const login = panel.login;
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -511,7 +511,6 @@ function OrganizationLoginPage({ panel, panelKey, onBack, onLoggedIn }) {
             </div>
             {notice && <p className={`notice notice--${notice.tone}`}>{notice.message}</p>}
             <button className="primary-button" type="submit" disabled={busy}>{busy ? 'در حال بررسی نشست…' : 'ورود به پنل'}</button>
-            <button className="text-button" type="button" onClick={onBack}>بازگشت به انتخاب پنل</button>
           </form>
 
           <p className="organization-login-note"><Icon name="lock" size={15} /> هیچ محموله، نرخ یا سندی پیش از تأیید نشست سازمانی از سرور بارگذاری نمی‌شود.</p>
@@ -521,7 +520,7 @@ function OrganizationLoginPage({ panel, panelKey, onBack, onLoggedIn }) {
   );
 }
 
-function RolePanelAccessDenied({ panel, currentRole, onLogout, onBack }) {
+function RolePanelAccessDenied({ panel, currentRole, onLogout }) {
   return (
     <div className="screen screen--panel-entry" dir="rtl">
       <AuthHeader />
@@ -536,7 +535,6 @@ function RolePanelAccessDenied({ panel, currentRole, onLogout, onBack }) {
           </div>
           <div className="panel-entry-actions">
             <button className="primary-button" type="button" onClick={onLogout}>خروج از نشست</button>
-            <button className="text-button" type="button" onClick={onBack}>بازگشت به انتخاب پنل</button>
           </div>
         </section>
       </main>
@@ -1322,11 +1320,11 @@ export default function App() {
   if (!authReady) return <div className="platform-loading" dir="rtl">در حال بررسی نشست امن…</div>;
   if (user && token) {
     if (panelEntryRoute && !panelEntryRoute.roles.includes(user.role)) {
-      return <RolePanelAccessDenied panel={panelEntryRoute} currentRole={user.role} onLogout={handleLogout} onBack={() => navigateAuth('role-select')} />;
+      return <RolePanelAccessDenied panel={panelEntryRoute} currentRole={user.role} onLogout={handleLogout} />;
     }
     return <PlatformWorkspace user={user} token={token} apiUrl={API_URL} onLogout={handleLogout} />;
   }
-  if (page === 'panel-entry' && panelEntryRoute) return <OrganizationLoginPage panel={panelEntryRoute} panelKey={panelEntryKey} onBack={() => navigateAuth('role-select')} onLoggedIn={handleLoggedIn} />;
+  if (page === 'panel-entry' && panelEntryRoute) return <OrganizationLoginPage panel={panelEntryRoute} panelKey={panelEntryKey} onLoggedIn={handleLoggedIn} />;
   if (page === 'admin') return <AdminPage />;
   if (page === 'role-select') return <RoleSelectionPage onDriverLogin={() => navigateAuth('login', 'driver')} onCarrierLogin={() => navigateAuth('login', 'carrier')} />;
   if (page === 'driver-register') return <RegisterPage onRegistered={setRegistration} />;

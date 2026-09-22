@@ -1,4 +1,5 @@
 import React from 'react';
+import gomrokLogo from '../assets/gomrok-logo.jpg';
 
 const paths = {
   home: <><path d="M3 11.5 12 4l9 7.5" /><path d="M5.5 10.5V20h13v-9.5" /><path d="M9.5 20v-5h5v5" /></>,
@@ -76,24 +77,15 @@ export function Icon({ name, size = 22, className = '', title }) {
 
 export function GomrokMark({ size = 42, className = '' }) {
   return (
-    <svg className={`gomrok-mark${className ? ` ${className}` : ''}`} width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      <rect x="2" y="2" width="44" height="44" rx="15" fill="currentColor" />
-      <path d="M13 28.5c0-7.7 4.8-13 12-13 4.7 0 8.1 1.8 10.2 4.9" stroke="#140e04" strokeWidth="4.2" strokeLinecap="round" />
-      <path d="M35 19.5v8h-8" stroke="#140e04" strokeWidth="4.2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="14" cy="29" r="4" fill="#4363ea" stroke="#140e04" strokeWidth="2.2" />
-      <path d="M16.5 31.5 23 38l9-9" stroke="#140e04" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <img className={`gomrok-mark${className ? ` ${className}` : ''}`} width={size} height={size} src={gomrokLogo} alt="GOMROK" />
   );
 }
 
-export function ProductLogo({ compact = false, inverse = false, subtitle = 'کنترل‌تاور حمل و گمرک' }) {
+export function ProductLogo({ compact = false, inverse = false, subtitle = 'شبکه هوشمند حمل‌ونقل' }) {
   return (
     <span className={`product-logo${compact ? ' product-logo--compact' : ''}${inverse ? ' product-logo--inverse' : ''}`}>
-      <GomrokMark />
-      <span className="product-logo__copy">
-        <strong>GOMROK</strong>
-        {!compact && <small>{subtitle}</small>}
-      </span>
+      <img className="product-logo__image" src={gomrokLogo} width="72" height="72" alt="GOMROK" />
+      {!compact && <span className="product-logo__copy"><small>{subtitle}</small></span>}
     </span>
   );
 }
@@ -213,4 +205,3 @@ export const navigationIconMap = {
 export function NavigationIcon({ section, size = 20 }) {
   return <Icon name={navigationIconMap[section] || 'dashboard'} size={size} />;
 }
-
