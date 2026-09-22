@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { createHash, randomBytes } from 'node:crypto';
 import { pool } from '../db.js';
-import { platformAuth, idempotencyKey } from '../security/platform-auth.js';
+import { platformAuth, resolveIdempotencyKey } from '../security/platform-auth.js';
 import { publishPlatformEvent, redactRealtimePayload, subscribeRealtime } from '../realtime/broker.js';
+import { assertConfidentialRateAccess, isContextBoundRfqActor } from '../domain/rfq-context-access.js';
+import { createContextScopedRfqRepository } from '../repositories/context-scoped-rfq.repository.js';
 import {
   ERROR_CODES,
   PERMISSIONS,
@@ -23,7 +25,6 @@ import {
   assertTenantScope,
   assertTransition,
   assertTripStartReady,
-  canReadQuote,
   maskEmail,
   maskPhone,
   parseJson,
@@ -31,6 +32,7 @@ import {
 } from '../domain/workflow.js';
 
 const router = Router();
+const contextScopedRfqRepository = createContextScopedRfqRepository(pool);
 
 function jsonResponse(body, status = 200) {
   return { body, status };
@@ -103,9 +105,14 @@ async function event(request, { eventName, entityType, entityId = null, payload 
 }
 
 async function runWrite(request, response, handler, { requireKey = false } = {}) {
-  const key = idempotencyKey(request);
+  let key;
+  try {
+    key = resolveIdempotencyKey(request);
+  } catch (error) {
+    return problem(response, error, request);
+  }
   if (requireKey && !key) {
-    return problem(response, new DomainError('AUTH-428', 'برای این عملیات حساس X-Idempotency-Key لازم است.', 428), request);
+    return problem(response, new DomainError('AUTH-428', 'برای این عملیات حساس Idempotency-Key یا X-Idempotency-Key لازم است.', 428), request);
   }
 
   if (key && request.actor.userId) {
@@ -1084,7 +1091,11 @@ router.get('/realtime', platformAuth({ permission: PERMISSIONS.READ }), (request
       if (closed || response.writableEnded) return;
       response.write(`id: ${event.id}\nevent: platform_event\ndata: ${JSON.stringify(event)}\n\n`);
     };
-    const unsubscribe = subscribeRealtime(request.actor, write);
+    const unsubscribe = subscribeRealtime({
+      ...request.actor,
+      sessionId: request.contextSession?.sessionId || null,
+      sessionGeneration: request.contextSession?.sessionGeneration ?? null
+    }, write, () => response.end());
     const heartbeat = setInterval(() => {
       if (closed || response.writableEnded) return;
       response.write(`: heartbeat ${Date.now()}\n\n`);
@@ -1113,6 +1124,10 @@ router.get('/context', platformAuth(), async (request, response) => {
     membershipId: request.actor.membershipId,
     role: request.actor.role,
     organizationType: request.actor.organizationType || null,
+    contextId: request.actor.contextId || null,
+    contextType: request.actor.contextType || null,
+    contextEvidenceLevel: request.actor.contextEvidenceLevel || null,
+    sessionGeneration: request.contextSession?.sessionGeneration ?? null,
     transactionRole: request.actor.transactionRole || null,
     delegation: request.actor.delegationScope || {},
     permissions: Object.values(PERMISSIONS).filter((permission) => hasPermission(request.actor.role, permission))
@@ -1899,25 +1914,7 @@ router.get('/rfqs', platformAuth({ roles: COMPANY_Y_ROLES, permission: PERMISSIO
     const actor = request.actor;
     const level = String(request.query.level || RFQ_LEVELS.MARKET_B).toUpperCase();
     if (level !== RFQ_LEVELS.MARKET_B || !isCompanyYActor(actor)) throw new DomainError('AUTH-403', 'فقط دفتر RFQ2 در پنل شرکت Y قابل مشاهده است.', 403);
-    const [organizations] = await pool.execute(
-      `SELECT id FROM platform_organizations
-        WHERE id = ? AND tenant_id = ? AND organization_type = 'company_y' AND status = 'active' AND qualification_state = 'qualified' LIMIT 1`,
-      [actor.organizationId, actor.tenantId]
-    );
-    if (!organizations[0]) throw new DomainError(ERROR_CODES.QUALIFICATION_EXPIRED, 'صلاحیت شرکت Y برای دریافت RFQ2 معتبر نیست.', 423);
-    const [rows] = await pool.execute(
-      `SELECT r.id, r.case_id, r.state, r.publisher_org_id, r.awarded_org_id, r.deadline_at, r.metadata_json,
-              c.origin_country, c.destination_country, c.origin_location, c.destination_location,
-              c.cargo_type, c.cargo_weight, c.cargo_weight_unit, c.direction,
-              q.id AS own_quote_id, q.amount AS own_quote_amount, q.currency AS own_quote_currency,
-              q.state AS own_quote_state, q.submitted_at AS own_quote_submitted_at
-         FROM rfq_books r
-         JOIN shipment_cases c ON c.id = r.case_id AND c.tenant_id = r.tenant_id
-         LEFT JOIN rfq_quotes q ON q.rfq_id = r.id AND q.tenant_id = r.tenant_id AND q.bidder_org_id = ?
-        WHERE r.tenant_id = ? AND r.level = 'RFQ2' AND r.state IN ('OPEN', 'EXPIRED', 'AWARDED')
-        ORDER BY r.deadline_at ASC, r.created_at DESC`,
-      [actor.organizationId, actor.tenantId]
-    );
+    const rows = await contextScopedRfqRepository.listCarrierRfqs({ actor });
     for (const row of rows) {
       if (row.own_quote_id) await audit(request, { eventType: 'QuoteRead', subjectType: 'rfq_quote', subjectId: row.own_quote_id, payload: { rfqId: row.id, level: RFQ_LEVELS.MARKET_B, ownQuote: true, sealed: row.state === 'OPEN' && new Date(row.deadline_at).getTime() > Date.now() } });
     }
@@ -1935,7 +1932,7 @@ router.get('/rfqs', platformAuth({ roles: COMPANY_Y_ROLES, permission: PERMISSIO
         cargo: { type: row.cargo_type, weight: row.cargo_weight, unit: row.cargo_weight_unit },
         metadata: parseJson(row.metadata_json, {}),
         ownQuote: row.own_quote_id ? { id: row.own_quote_id, amount: row.own_quote_amount, currency: row.own_quote_currency, state: row.own_quote_state, submittedAt: row.own_quote_submitted_at } : null,
-        awardedToMe: row.state === 'AWARDED' && row.awarded_org_id === actor.organizationId
+        awardedToMe: Boolean(row.awarded_to_me)
       }))
     });
   } catch (error) {
@@ -1946,42 +1943,22 @@ router.get('/rfqs', platformAuth({ roles: COMPANY_Y_ROLES, permission: PERMISSIO
 router.get('/rfqs/:rfqId', platformAuth({ permission: PERMISSIONS.READ }), async (request, response) => {
   try {
     const rfqId = parsePositiveId(request.params.rfqId, 'شناسه RFQ');
-    const rfq = await loadRfq(rfqId, request.actor.tenantId);
+    const rfq = await contextScopedRfqRepository.findRfqById({ actor: request.actor, rfqId });
     const caseItem = await loadCase(rfq.case_id, request.actor.tenantId);
     assertAbacCaseScope(request.actor, caseItem);
-    const [bidderOrganizations] = await pool.execute('SELECT organization_type, status, qualification_state FROM platform_organizations WHERE id = ? AND tenant_id = ? LIMIT 1', [request.actor.organizationId, request.actor.tenantId]);
-    const bidderOrganization = bidderOrganizations[0];
-    const bidderType = bidderOrganization?.organization_type;
-    const isPublisher = request.actor.organizationId === rfq.publisher_org_id;
     if (isShipperActor(request.actor)) {
       assertShipperOrganization(request.actor);
       assertCaseAccess(request.actor, caseItem);
     }
     if (normalizeRole(request.actor.role) === ROLES.SHIPPER_FINANCE_USER) throw new DomainError('AUTH-403', 'دفتر پیشنهاد در دامنه کاربر مالی نیست.', 403);
     if (isShipperActor(request.actor) && rfq.level !== RFQ_LEVELS.MARKET_A) throw new DomainError('AUTH-403', 'RFQ2 و دفتر ظرفیت بازار B در پنل مشتری قابل مشاهده نیست.', 403);
+    const { rows: quotes } = await contextScopedRfqRepository.readVisibleQuotes({ actor: request.actor, rfq });
     if (rfq.state === 'OPEN' && new Date(rfq.deadline_at).getTime() <= Date.now()) {
       const [closed] = await pool.execute(`UPDATE rfq_books SET state = 'EXPIRED' WHERE id = ? AND tenant_id = ? AND state = 'OPEN'`, [rfqId, request.actor.tenantId]);
       if (closed.affectedRows) await event(request, { eventName: 'OffersWindowClosed', entityType: 'rfq', entityId: rfqId, payload: { level: rfq.level, caseId: rfq.case_id }, recipientOrgId: rfq.publisher_org_id });
       rfq.state = 'EXPIRED';
     }
-    const isEligibleMarketParticipant = bidderOrganization?.status === 'active'
-      && bidderOrganization.qualification_state === 'qualified'
-      && (rfq.level === RFQ_LEVELS.MARKET_A ? bidderType === 'company_x' : bidderType === 'company_y');
-    if (!isPublisher && !isEligibleMarketParticipant) throw new DomainError('AUTH-403', 'این دفتر پیشنهاد خارج از بازار و عضویت شماست.', 403);
-    const [quotes] = await pool.execute(
-      `SELECT q.id, q.bidder_org_id, o.display_name AS bidder_display_name, q.amount, q.currency, q.terms_json, q.qualification_state,
-              q.state, q.submitted_at, q.is_ai_assisted
-         FROM rfq_quotes q JOIN platform_organizations o ON o.id = q.bidder_org_id AND o.tenant_id = q.tenant_id
-        WHERE q.rfq_id = ? AND q.tenant_id = ? ORDER BY q.submitted_at ASC`,
-      [rfqId, request.actor.tenantId]
-    );
-    const canSee = (quote) => canReadQuote({
-      actor: request.actor,
-      rfq: { ...rfq, tenantId: rfq.tenant_id, publisherOrgId: rfq.publisher_org_id, deadlineAt: rfq.deadline_at },
-      quote: { bidderOrgId: quote.bidder_org_id },
-      now: new Date()
-    });
-    const visibleQuotes = quotes.filter(canSee).map((quote) => ({
+    const visibleQuotes = quotes.map((quote) => ({
       id: quote.id,
       bidderOrgId: quote.bidder_org_id,
       companyName: quote.bidder_display_name || quote.bidder_org_id,
@@ -2063,24 +2040,27 @@ router.post('/rfqs/:rfqId/quotes', platformAuth({ roles: [ROLES.COMPANY_X_OWNER,
   }, { requireKey: true });
 });
 
-router.get('/rfqs/:rfqId/pricing', platformAuth({ roles: [ROLES.COMPANY_X_OWNER, ROLES.COMPANY_X_PRICING_EXPERT], permission: PERMISSIONS.SEE_PRICE }), async (request, response) => {
+router.get('/rfqs/:rfqId/pricing', platformAuth({ roles: [ROLES.COMPANY_X_OWNER, ROLES.COMPANY_X_PRICING_EXPERT, ...COMPANY_Y_ROLES], permission: PERMISSIONS.READ }), async (request, response) => {
   try {
+    assertConfidentialRateAccess(request.actor);
     const rfqId = parsePositiveId(request.params.rfqId, 'شناسه RFQ');
-    const rfq = await loadRfq(rfqId, request.actor.tenantId);
+    const rfq = await contextScopedRfqRepository.findRfqById({ actor: request.actor, rfqId });
     if (rfq.level !== RFQ_LEVELS.MARKET_A) throw new DomainError('AUTH-403', 'قیمت داخلی فقط در Market A و برای شرکت X مجاز است.', 403);
     const item = await loadCase(rfq.case_id, request.actor.tenantId);
-    const [quotes] = await pool.execute(`SELECT id, amount, currency, terms_json, internal_pricing_json, submitted_at FROM rfq_quotes WHERE tenant_id = ? AND rfq_id = ? AND bidder_org_id = ? LIMIT 1`, [request.actor.tenantId, rfqId, request.actor.organizationId]);
-    if (!quotes[0]) throw new DomainError('PRICE-404', 'پیشنهاد داخلی این شرکت برای RFQ پیدا نشد.', 404);
     try {
       assertCaseAccess(request.actor, item);
     } catch (error) {
       if (!COMPANY_X_ROLES.includes(normalizeRole(request.actor.role)) || error.code !== 'AUTH-403') throw error;
-      const [organizations] = await pool.execute(`SELECT id FROM platform_organizations WHERE id = ? AND tenant_id = ? AND organization_type = 'company_x' AND status = 'active' AND qualification_state = 'qualified' LIMIT 1`, [request.actor.organizationId, request.actor.tenantId]);
-      if (!organizations[0]) throw error;
+      if (!isContextBoundRfqActor(request.actor)) {
+        const [organizations] = await pool.execute(`SELECT id FROM platform_organizations WHERE id = ? AND tenant_id = ? AND organization_type = 'company_x' AND status = 'active' AND qualification_state = 'qualified' LIMIT 1`, [request.actor.organizationId, request.actor.tenantId]);
+        if (!organizations[0]) throw error;
+      }
       assertAbacCaseScope(request.actor, item);
     }
-    await audit(request, { eventType: 'QuotePricingRead', subjectType: 'rfq_quote', subjectId: quotes[0].id, payload: { rfqId, level: rfq.level } });
-    return response.json({ rfqId, quoteId: quotes[0].id, amount: quotes[0].amount, currency: quotes[0].currency, terms: publicQuoteTerms(quotes[0].terms_json), pricing: publicPricing(quotes[0].internal_pricing_json), submittedAt: quotes[0].submitted_at });
+    const quote = await contextScopedRfqRepository.findOwnInternalPricing({ actor: request.actor, rfq });
+    if (!quote) throw new DomainError('PRICE-404', 'پیشنهاد داخلی این شرکت برای RFQ پیدا نشد.', 404);
+    await audit(request, { eventType: 'QuotePricingRead', subjectType: 'rfq_quote', subjectId: quote.id, payload: { rfqId, level: rfq.level } });
+    return response.json({ rfqId, quoteId: quote.id, amount: quote.amount, currency: quote.currency, terms: publicQuoteTerms(quote.terms_json), pricing: publicPricing(quote.internal_pricing_json), submittedAt: quote.submitted_at });
   } catch (error) {
     return problem(response, error, request);
   }

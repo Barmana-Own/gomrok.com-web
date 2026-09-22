@@ -7,6 +7,38 @@ export const SURFACES = Object.freeze({
   ADMIN: 'admin'
 });
 
+// Legal qualifications are intentionally separate from application user roles.
+// A user role grants application permissions; an organization role grant proves
+// that the legal entity may operate in the corresponding business capacity.
+export const ORGANIZATION_ROLE_GRANT_TYPES = Object.freeze({
+  FORWARDER: 'FORWARDER',
+  CARRIER: 'CARRIER'
+});
+
+// Operating contexts are data and authorization boundaries, not UI panels.
+export const OPERATING_CONTEXT_TYPES = Object.freeze({
+  FORWARDER: 'FWD',
+  CARRIER: 'CAR'
+});
+
+export const CONTEXT_SESSION_MODES = Object.freeze({
+  BOOTSTRAP: 'bootstrap',
+  CONTEXT: 'context'
+});
+
+export const OPERATING_CONTEXT_TYPE_BY_GRANT = Object.freeze({
+  [ORGANIZATION_ROLE_GRANT_TYPES.FORWARDER]: OPERATING_CONTEXT_TYPES.FORWARDER,
+  [ORGANIZATION_ROLE_GRANT_TYPES.CARRIER]: OPERATING_CONTEXT_TYPES.CARRIER
+});
+
+// These legal document domains must remain distinct even when they reference
+// the same shipment, allocation, or underlying file storage provider.
+export const DOCUMENT_TYPES = Object.freeze({
+  BILL_OF_LADING: 'BILL_OF_LADING',
+  CMR: 'CMR',
+  TIR_CARNET: 'TIR_CARNET'
+});
+
 export const ROLES = Object.freeze({
   SUPER_ADMIN: 'super_admin',
   MARKETPLACE_ADMIN: 'marketplace_admin',
@@ -102,6 +134,7 @@ export const RFQ_LEVELS = Object.freeze({ MARKET_A: 'RFQ1', MARKET_B: 'RFQ2' });
 export const RFQ_STATES = Object.freeze(['OPEN', 'AWARDED', 'CANCELLED', 'EXPIRED']);
 
 export const EVENTS = Object.freeze([
+  'PlatformCredentialProvisioned',
   'CargoRequestCreated',
   'CargoRequestUpdated',
   'RFQPublished',
@@ -182,11 +215,39 @@ export const EVENTS = Object.freeze([
   'ConflictCaseUpdated',
   'SecurityIncidentOpened',
   'NotificationPolicyChanged',
-  'AIReviewRecorded'
+  'AIReviewRecorded',
+  'ContextSwitched'
 ]);
 
 export const ERROR_CODES = Object.freeze({
   STEP_UP_REQUIRED: 'AUTH-428',
+  IDEMPOTENCY_HEADER: 'IDEM-400',
+  CONTEXT_BINDING: 'CTX-001',
+  CONTEXT_CROSS_SCOPE: 'CTX-002',
+  CONTEXT_CONFIDENTIAL_RATE: 'CTX-003',
+  CONTEXT_SESSION_CONFLICT: 'CTX-004',
+  SELF_AWARD_DISCLOSURE_REQUIRED: 'AWD-004',
+  RELATED_PARTY_RANKING_INVARIANT: 'RNK-002',
+  RELATED_PARTY_DISCLOSURE_MISSING: 'RNK-003',
+  CONTEXT_ELIGIBILITY_INVALID: 'CEG-003',
+  ROLE_SUSPENSION_SCOPE_INVALID: 'CEG-004',
+  CONTRACT_ROLE_LOCKED: 'CNT-005',
+  THIRD_PARTY_CLAUSE_REQUIRED: 'CNT-006',
+  CONTEXT_LEDGER_REQUIRED: 'FIN-007',
+  VEHICLE_DEMURRAGE_REQUIRED: 'FIN-008',
+  LOT_FINANCING_REQUIRED: 'FIN-009',
+  AUDIT_CONTEXT_REQUIRED: 'AUD-002',
+  CAPACITY_COMMITMENT_LIMIT: 'CAP-001',
+  RESIDUAL_RETENDER_FAILED: 'CAP-002',
+  FORWARDER_DRIVER_ASSIGNMENT: 'FLT-006',
+  ACTIVE_PLATE_CONFLICT: 'FLT-007',
+  VEHICLE_SUBSTITUTION_REASON_REQUIRED: 'FLT-008',
+  TIR_INVENTORY_INSUFFICIENT: 'TIR-004',
+  DOCUMENT_GRANULARITY_MISMATCH: 'DOC-010',
+  VEHICLE_GATE_BYPASS: 'GATE-002',
+  WEIGHT_RECONCILIATION_MISMATCH: 'DOC-001',
+  POD_EVIDENCE_INCOMPLETE: 'POD-003',
+  ROLLING_INTRODUCTION_INVALID: 'INT-001',
   QUALIFICATION_EXPIRED: 'QUA-423',
   CARRIER_COVERAGE_MISSING: 'COV-424',
   VEHICLE_CARGO_MISMATCH: 'VEH-422',
@@ -216,6 +277,39 @@ export const ERROR_CODES = Object.freeze({
   RULEPACK_STATE: 'RULE-409',
   CRITICAL_NOTIFICATION: 'NTF-403',
   WEBHOOK_REPLAY: 'INT-409'
+});
+
+const annexError = (httpStatus, enforcement) => Object.freeze({ httpStatus, enforcement });
+
+// HTTP null means the source defines a CI/audit invariant or leaves the HTTP
+// mapping open. Callers must not invent a transport status from this registry.
+export const ANNEX_ERROR_REGISTRY = Object.freeze({
+  'CTX-001': annexError(400, 'HTTP'),
+  'CTX-002': annexError(403, 'HTTP'),
+  'CTX-003': annexError(403, 'HTTP'),
+  'CTX-004': annexError(409, 'HTTP'),
+  'AWD-004': annexError(422, 'HTTP'),
+  'RNK-002': annexError(500, 'INVARIANT_AND_BUILD'),
+  'RNK-003': annexError(null, 'UI_CONTRACT_TEST'),
+  'CEG-003': annexError(403, 'HTTP'),
+  'CEG-004': annexError(409, 'HTTP'),
+  'CNT-005': annexError(409, 'HTTP'),
+  'CNT-006': annexError(422, 'HTTP'),
+  'FIN-007': annexError(422, 'HTTP'),
+  'FIN-008': annexError(422, 'HTTP'),
+  'FIN-009': annexError(422, 'HTTP'),
+  'AUD-002': annexError(null, 'AUDIT_ACCEPTANCE'),
+  'CAP-001': annexError(422, 'HTTP'),
+  'CAP-002': annexError(500, 'HTTP'),
+  'FLT-006': annexError(403, 'HTTP'),
+  'FLT-007': annexError(409, 'HTTP'),
+  'FLT-008': annexError(422, 'HTTP'),
+  'TIR-004': annexError(422, 'HTTP'),
+  'DOC-010': annexError(422, 'HTTP'),
+  'GATE-002': annexError(403, 'HTTP'),
+  'DOC-001': annexError(null, 'HTTP_MAPPING_OPEN'),
+  'POD-003': annexError(null, 'HTTP_MAPPING_OPEN'),
+  'INT-001': annexError(null, 'HTTP_MAPPING_OPEN')
 });
 
 export const RELATIONSHIPS = Object.freeze({
@@ -282,6 +376,11 @@ export const STATE_GRAPH = Object.freeze({
 export function normalizeRole(value) {
   const role = String(value || '').trim().toLowerCase().replace(/[-\s]+/g, '_');
   return role === 'carrier' ? ROLES.COMPANY_Y_OWNER : role;
+}
+
+export function operatingContextTypeForRoleGrant(value) {
+  const roleGrantType = String(value || '').trim().toUpperCase();
+  return OPERATING_CONTEXT_TYPE_BY_GRANT[roleGrantType] || null;
 }
 
 export function hasPermission(role, permission) {

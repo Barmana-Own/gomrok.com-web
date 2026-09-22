@@ -51,6 +51,8 @@ const roles = {
 
 const menu = [
   ['dashboard', 'داشبورد'],
+  ['cargo-inquiry', 'استعلام مشترک حمل'],
+  ['cargo-inquiries', 'استعلام‌های ثبت‌شده'],
   ['new-request', 'ثبت درخواست حمل'],
   ['active', 'درخواست‌های فعال'],
   ['rfq', 'RFQ سطح ۱ / پیشنهادها'],
@@ -163,6 +165,9 @@ export default function ShipperPanel({ user, token, apiUrl, onLogout }) {
   const canEdit = [ 'shipper_admin', 'shipper_logistics_user' ].includes(role);
   const canFinance = [ 'shipper_admin', 'shipper_finance_user' ].includes(role);
   const [dashboard, setDashboard] = useState(null);
+  const [cargoInquiries, setCargoInquiries] = useState([]);
+  const [selectedCargoInquiry, setSelectedCargoInquiry] = useState(null);
+  const [cargoOffers, setCargoOffers] = useState([]);
   const [context, setContext] = useState({ delegation: {} });
   const [section, setSection] = useState('dashboard');
   const [selectedCase, setSelectedCase] = useState(null);
@@ -204,14 +209,16 @@ export default function ShipperPanel({ user, token, apiUrl, onLogout }) {
   const loadDashboard = async () => {
     setBusy(true);
     try {
-      const [nextDashboard, nextNotifications, nextContext] = await Promise.all([
+      const [nextDashboard, nextNotifications, nextContext, nextCargoInquiries] = await Promise.all([
         requestJson(apiUrl, '/api/platform/dashboard', token),
         requestJson(apiUrl, '/api/platform/notifications?limit=30', token).catch(() => ({ notifications: [] })),
-        requestJson(apiUrl, '/api/platform/context', token).catch(() => ({ delegation: {} }))
+        requestJson(apiUrl, '/api/platform/context', token).catch(() => ({ delegation: {} })),
+        requestJson(apiUrl, '/api/cargo-inquiries/', token).catch(() => ({ items: [] }))
       ]);
       setDashboard(nextDashboard);
       setNotifications(nextNotifications.notifications || []);
       setContext(nextContext);
+      setCargoInquiries(nextCargoInquiries.items || []);
     } catch (error) {
       setNotice({ code: error.code, message: error.message });
     } finally {
@@ -222,6 +229,54 @@ export default function ShipperPanel({ user, token, apiUrl, onLogout }) {
   usePlatformRealtime({ apiUrl, token, onEvent: loadDashboard });
 
   useEffect(() => { loadDashboard(); }, [token]);
+
+  useEffect(() => {
+    const continuationKey = new URLSearchParams(window.location.search).get('continuationKey');
+    if (!continuationKey || !token) return undefined;
+    const storageKey = `gomrok-cargo-continuation:${continuationKey}`;
+    let continuation;
+    try {
+      continuation = JSON.parse(localStorage.getItem(storageKey) || 'null');
+    } catch (_error) {
+      continuation = null;
+    }
+    if (!continuation?.publicId || !continuation?.continuationToken) {
+      setNotice({ code: 'CARGO-404', message: 'ارجاع ادامه استعلام پیدا نشد یا منقضی شده است.' });
+      return undefined;
+    }
+    let active = true;
+    const continueInquiry = async () => {
+      setBusy(true);
+      setNotice(null);
+      try {
+        await requestJson(apiUrl, `/api/cargo-inquiries/${encodeURIComponent(continuation.publicId)}/continue`, token, {
+          method: 'POST',
+          headers: { 'X-Continuation-Token': continuation.continuationToken },
+          idempotencyKey: `cargo-continue-${continuation.publicId}`,
+          body: JSON.stringify({})
+        });
+        localStorage.removeItem(storageKey);
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete('continuationKey');
+        window.history.replaceState({}, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+        const result = await requestJson(apiUrl, `/api/cargo-inquiries/${encodeURIComponent(continuation.publicId)}/submit-automatic`, token, {
+          method: 'POST',
+          idempotencyKey: `cargo-publish-${continuation.publicId}`,
+          body: JSON.stringify({})
+        });
+        if (!active) return;
+        setSection('active');
+        setNotice({ message: result.state === 'PUBLISHED' || result.state === 'PUBLISHED_NO_AUDIENCE' ? 'استعلام به نسخه حساب شما متصل و برای گردش خودکار ثبت شد.' : `استعلام به بررسی تخصصی منتقل شد: ${result.reason || result.state}` });
+        await loadDashboard();
+      } catch (error) {
+        if (active) setNotice({ code: error.code, message: error.message });
+      } finally {
+        if (active) setBusy(false);
+      }
+    };
+    continueInquiry();
+    return () => { active = false; };
+  }, [token]);
 
   const openCase = async (item) => {
     setBusy(true);
@@ -235,6 +290,40 @@ export default function ShipperPanel({ user, token, apiUrl, onLogout }) {
       setSelectedCase({ ...details.case, ...details, finance: ledger, issues: issueResult.issues || [] });
       setIssues(issueResult.issues || []);
       setSection('active');
+    } catch (error) {
+      setNotice({ code: error.code, message: error.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openCargoInquiry = async (item) => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const [detail, offers] = await Promise.all([
+        requestJson(apiUrl, `/api/cargo-inquiries/${encodeURIComponent(item.publicId)}`, token),
+        requestJson(apiUrl, `/api/cargo-inquiries/${encodeURIComponent(item.publicId)}/offers`, token).catch(() => ({ items: [] }))
+      ]);
+      setSelectedCargoInquiry(detail.inquiry);
+      setCargoOffers(offers.items || []);
+      setSection('cargo-inquiries');
+    } catch (error) {
+      setNotice({ code: error.code, message: error.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const selectCargoOffer = async (offerId) => {
+    if (!selectedCargoInquiry?.publicId) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      await requestJson(apiUrl, `/api/cargo-inquiries/${encodeURIComponent(selectedCargoInquiry.publicId)}/select-offer`, token, { method: 'POST', idempotencyKey: `cargo-select-${selectedCargoInquiry.publicId}-${offerId}`, body: JSON.stringify({ offerId }) });
+      setNotice({ message: 'پیشنهاد با کنترل نسخه و قفل تراکنشی انتخاب شد.' });
+      await loadDashboard();
+      await openCargoInquiry({ publicId: selectedCargoInquiry.publicId });
     } catch (error) {
       setNotice({ code: error.code, message: error.message });
     } finally {
@@ -460,6 +549,8 @@ export default function ShipperPanel({ user, token, apiUrl, onLogout }) {
 
   const caseCards = useMemo(() => cases.map((item) => ({ ...item, primaryState: item.deliveryState || item.tripState || item.capacityState || item.commercialState })), [cases]);
 
+  const renderCargoInquiries = () => <section className="platform-section"><div className="platform-section__heading"><div><span className="platform-eyebrow">Shared cargo inquiry · versioned offers</span><h2>استعلام‌های حمل</h2></div><button type="button" className="platform-button platform-button--primary" onClick={() => window.location.assign('/app/quote')}>استعلام جدید</button></div>{selectedCargoInquiry ? <div className="cargo-panel-detail"><button type="button" className="platform-button" onClick={() => { setSelectedCargoInquiry(null); setCargoOffers([]); }}>بازگشت به فهرست</button><div className="cargo-panel-detail__summary"><strong>{selectedCargoInquiry.cargo?.title || 'استعلام حمل'}</strong><span>{selectedCargoInquiry.state} · نسخه {selectedCargoInquiry.versionNo}</span><span>{selectedCargoInquiry.stops?.[0]?.city || 'مبدأ'} ← {selectedCargoInquiry.stops?.[1]?.city || 'مقصد'}</span><span>وزن: {selectedCargoInquiry.review?.calculation?.totalGrossWeightKg ? `${Number(selectedCargoInquiry.review.calculation.totalGrossWeightKg).toLocaleString('fa-IR')} کیلوگرم` : 'نامشخص'}</span></div><div className="cargo-panel-offers"><h3>پیشنهادهای رانندگان واجد شرایط</h3>{cargoOffers.length ? cargoOffers.map((offer) => <article key={offer.id}><div><strong>{Number(offer.amount).toLocaleString('fa-IR')} {offer.currency}</strong><span>{offer.basis || 'مبنای قیمت ثبت نشده'}</span><small>اعتبار تا {offer.validUntil || 'ثبت نشده'}</small></div><button type="button" className="platform-button platform-button--primary" onClick={() => selectCargoOffer(offer.id)} disabled={busy || offer.state !== 'ACTIVE' || selectedCargoInquiry.state === 'OFFER_SELECTED'}>{offer.state === 'SELECTED' ? 'انتخاب‌شده' : offer.state === 'ACTIVE' ? 'انتخاب پیشنهاد' : offer.state}</button></article>) : <div className="platform-empty-inline">هنوز پیشنهاد فعالی برای نسخه جاری ثبت نشده است.</div>}</div></div> : <div className="cargo-inquiry-list">{cargoInquiries.length ? cargoInquiries.map((item) => <button type="button" className="cargo-inquiry-list__row" key={item.publicId} onClick={() => openCargoInquiry(item)}><strong>{item.cargo?.title || 'استعلام حمل'}</strong><span>{item.state} · {item.trackingCode}</span><small>{item.stops?.[0]?.city || 'مبدأ'} ← {item.stops?.[1]?.city || 'مقصد'}</small></button>) : <div className="platform-empty"><strong>استعلامی در حساب شما ثبت نشده است</strong><span>فرم مشترک را باز کن؛ پیش‌نویس مهمان پس از احراز به همین سازمان متصل می‌شود.</span></div>}</div>}</section>;
+
   const renderOverview = () => <>
     <section className="platform-metrics"><article><span>پرونده‌های مجاز</span><strong>{Number(metrics.cases).toLocaleString('fa-IR')}</strong><small>tenant / organization scoped</small></article><article><span>سفر فعال</span><strong>{Number(metrics.activeTrips).toLocaleString('fa-IR')}</strong><small>ETA و Timeline کنترل‌شده</small></article><article><span>شاهد یا اقدام معوق</span><strong>{Number(metrics.pendingEvidence).toLocaleString('fa-IR')}</strong><small>next action از read model</small></article></section>
     <section className="platform-section"><div className="platform-section__heading"><div><span className="platform-eyebrow">Customer control tower</span><h2>پرونده‌های اخیر</h2></div><button className="platform-button" type="button" onClick={loadDashboard}>بروزرسانی</button></div>{caseCards.length ? <div className="platform-case-grid">{caseCards.map((item) => <button className="platform-case-card" key={item.id} type="button" onClick={() => openCase(item)}><div className="platform-case-card__top"><span>#{item.caseNumber}</span><RiskBadge flags={item.riskFlags} /></div><strong>{item.cargo?.type || 'محموله در Draft'}</strong><small>{item.origin?.location || 'مبدأ نامشخص'} ← {item.destination?.location || 'مقصد نامشخص'}</small><div className="platform-case-card__state">{stateLabel(item.primaryState)}</div></button>)}</div> : <div className="platform-empty"><strong>پرونده‌ای در محدوده سازمان نیست</strong><span>ثبت درخواست جدید از منوی سمت راست شروع می‌شود.</span></div>}</section>
@@ -489,6 +580,7 @@ export default function ShipperPanel({ user, token, apiUrl, onLogout }) {
 
   let content = renderOverview();
   if (section === 'active') content = selectedCase ? renderCaseDetail() : renderCases();
+  if (section === 'cargo-inquiries') content = renderCargoInquiries();
   if (section === 'new-request') content = <Wizard draft={draft} setDraft={setDraft} step={step} setStep={setStep} draftCase={draftCase} review={review} busy={busy} onSave={saveDraft} onPublish={publishRfq} canPublish={canPublish} />;
   if (section === 'rfq') content = renderRfq();
   if (section === 'contracts') content = renderContracts();
@@ -506,7 +598,8 @@ export default function ShipperPanel({ user, token, apiUrl, onLogout }) {
 
   const selectMenuSection = (key) => {
     closeMenu();
-    if (key === 'new-request') startNewRequest();
+    if (key === 'cargo-inquiry') window.location.assign('/app/quote');
+    else if (key === 'new-request') startNewRequest();
     else if (key === 'tracking') loadTracking();
     else if (key === 'pod') loadPod();
     else setSection(key);

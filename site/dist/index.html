@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="سامانه‌ای هوشمند برای مدیریت تشریفات گمرکی، کنترل جریان کالا، ارزیابی ریسک و تسریع ترخیص با دید لحظه‌ای و داده‌های یکپارچه."
+    />
+    <meta name="theme-color" content="#062a28" />
+    <title>گمرک | سامانه هوشمند مدیریت تشریفات گمرکی</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">رفتن به محتوای اصلی</a>
+    <div class="site-shell">
+      <header class="site-header" data-site-header>
+        <div class="nav-shell">
+          <a class="brand" href="#top" aria-label="صفحه اصلی گمرک">
+            <span class="brand-name">گمرک</span>
+          </a>
+
+          <nav class="desktop-nav" aria-label="پیمایش اصلی">
+            <div class="menu-wrap">
+              <button class="menu-trigger" type="button" data-menu-trigger="system" aria-expanded="false">
+                سامانه
+              </button>
+              <div class="mega-menu system-menu" data-menu-panel="system" hidden>
+                <div class="system-menu-intro">
+                  <p class="menu-label">شش پنل سامانه گمرک</p>
+                  <p>هر نقش، فضای عملیاتی و سطح دسترسی مخصوص خود را دارد. برای ورود به پنل مربوط، گزینه را در تب جدید باز کنید.</p>
+                </div>
+                <div class="system-role-grid" aria-label="پنل‌های سامانه گمرک">
+                  <a class="system-role-card" href="/app/shipper" target="_blank" rel="noopener">
+                    <strong>صاحب کالا</strong><span>محموله، اسناد، رهگیری و تسویه</span>
+                  </a>
+                  <a class="system-role-card" href="/app/forwarder" target="_blank" rel="noopener">
+                    <strong>فورواردر</strong><span>RFQ، ظرفیت و اجرای حمل</span>
+                  </a>
+                  <a class="system-role-card" href="/app/careers" target="_blank" rel="noopener">
+                    <strong>کریر</strong><span>ناوگان، راننده و تخصیص سفر</span>
+                  </a>
+                  <a class="system-role-card" href="/app/driver" target="_blank" rel="noopener">
+                    <strong>راننده</strong><span>مأموریت، GPS، POD و مدارک</span>
+                  </a>
+                  <a class="system-role-card" href="/app/agent" target="_blank" rel="noopener">
+                    <strong>نماینده مقصد</strong><span>تحویل، شواهد و مغایرت</span>
+                  </a>
+                  <a class="system-role-card" href="/admin/v2" target="_blank" rel="noopener">
+                    <strong>مدیریت سامانه</strong><span>KYC، ریسک، امنیت و حاکمیت</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="menu-wrap">
+              <button class="menu-trigger" type="button" data-menu-trigger="markets" aria-expanded="false">
+                خدمات
+              </button>
+              <div class="mega-menu wide" data-menu-panel="markets" hidden>
+                <div class="mega-column">
+                  <p class="menu-label">عملیات</p>
+                  <a href="#pathways">گمرکات بزرگ و چندمحوطه‌ای</a>
+                  <a href="#pathways">گمرکات اجرایی و تخصصی</a>
+                  <a href="#pathways">مدیریت دروازه‌های ورودی و خروجی</a>
+                  <a href="#pathways">دید یکپارچه محموله‌ها</a>
+                  <a href="#pathways">کنترل و تطبیق اسناد و بار</a>
+                </div>
+                <div class="mega-column">
+                  <p class="menu-label">کاربران</p>
+                  <a href="#contact">مدیریت گمرک</a>
+                  <a href="#contact">فناوری اطلاعات</a>
+                  <a href="#contact">مدیریت عملیات و ارزیابی</a>
+                  <a href="#contact">کارشناسان گمرکی و ترخیص</a>
+                  <a href="#contact">کاربران پذیرش و بازرسی</a>
+                </div>
+                <div class="mega-column">
+                  <p class="menu-label">حوزه‌های کاربرد</p>
+                  <a href="#pathways">واردکنندگان و صادرکنندگان</a>
+                  <a href="#pathways">تولیدکنندگان و مناطق ویژه</a>
+                  <a href="#pathways">شرکت‌های حمل‌ونقل و فورواردرها</a>
+                  <a href="#pathways">انبارها و مراکز توزیع</a>
+                  <a href="#pathways">گمرکات مرزی و بنادر</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="menu-wrap">
+              <button class="menu-trigger" type="button" data-menu-trigger="featured" aria-expanded="false">
+                امکانات
+              </button>
+              <div class="mega-menu features-menu" data-menu-panel="featured" hidden>
+                <div class="features-menu-sidebar">
+                  <div class="mega-column">
+                    <p class="menu-label">امکانات سامانه</p>
+                    <a href="#platform">مدیریت محموله و اسناد</a>
+                    <a href="#features">تصمیم‌یار و کنترل ریسک</a>
+                    <a href="#calculator">محاسبه زمان و هزینه</a>
+                    <a href="#transport-operations">استعلام حمل و رهگیری</a>
+                    <a href="#contact">درخواست معرفی سامانه</a>
+                  </div>
+                  <div class="mega-column feature-problem-list">
+                    <p class="menu-label">مسئله‌ای که حل می‌کنیم</p>
+                    <a href="#transport-operations">راننده: بار برگشتی و زمان انتظار</a>
+                    <a href="#transport-operations">کریر: ظرفیت خالی و کنترل ناوگان</a>
+                    <a href="#transport-operations">فورواردر: قیمت‌گیری و پیگیری پراکنده</a>
+                  </div>
+                </div>
+                <div class="comparison-menu-block" id="comparison-menu">
+                  <p class="menu-label">مقایسه رویکردها در بازار</p>
+                  <div class="comparison-table-wrap">
+                    <table class="comparison-table">
+                      <caption class="sr-only">مقایسه سامانه گمرک با راهکارهای داخلی جزیره‌ای و پلتفرم‌های بین‌المللی حمل</caption>
+                      <thead><tr><th scope="col">معیار</th><th scope="col">راهکارهای داخلی جزیره‌ای</th><th scope="col">پلتفرم‌های بین‌المللی حمل</th><th scope="col">سامانه گمرک</th></tr></thead>
+                      <tbody>
+                        <tr><th scope="row">پوشش زنجیره</th><td>معمولاً یک بخش</td><td>حمل بین‌المللی</td><td>حمل، گمرک و تحویل</td></tr>
+                        <tr><th scope="row">استعلام و قیمت</th><td>پیگیری تلفنی یا فایل</td><td>پیشنهادهای حمل عمومی</td><td>RFQ نسخه‌دار و قابل‌مقایسه</td></tr>
+                        <tr><th scope="row">بومی‌سازی</th><td>وابسته به راهکار</td><td>محدود برای مقررات ایران</td><td>نقش‌ها، اسناد و فرآیندهای بومی</td></tr>
+                        <tr><th scope="row">دید عملیاتی</th><td>گزارش‌های جدا</td><td>تمرکز بر حمل</td><td>وضعیت محموله تا ترخیص و تحویل</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="menu-wrap">
+              <button class="menu-trigger" type="button" data-menu-trigger="resources" aria-expanded="false">
+                راهنما
+              </button>
+              <div class="mega-menu guide-menu" data-menu-panel="resources" hidden>
+                <div class="mega-column">
+                  <p class="menu-label">راهنمای شروع</p>
+                  <a href="#why-terminal">سامانه گمرک چیست؟</a>
+                  <a href="#platform">از پذیرش تا ترخیص</a>
+                  <a href="#transport-operations">حمل بین‌المللی و گمرک</a>
+                  <a href="#faq">پرسش‌های متداول</a>
+                </div>
+                <div class="mega-column">
+                  <p class="menu-label">ماژول‌های عملیاتی</p>
+                  <a href="#platform">پذیرش و کنترل ورودی</a>
+                  <a href="#platform">اسناد و ارزیابی ریسک</a>
+                  <a href="#platform">محوطه، انبار و بارگیری</a>
+                  <a href="#features">داشبورد و تصمیم‌یار</a>
+                </div>
+                <div class="mega-column">
+                  <p class="menu-label">راهنمای نقش‌ها</p>
+                  <a href="#transport-operations">صاحب کالا و فورواردر</a>
+                  <a href="#transport-operations">کریر و راننده</a>
+                  <a href="#transport-operations">نماینده مقصد</a>
+                  <a href="#contact">راه‌اندازی و پشتیبانی</a>
+                </div>
+              </div>
+            </div>
+
+            <a class="nav-link" href="#contact">درباره سامانه</a>
+          </nav>
+
+          <div class="header-actions">
+            <a class="phone-button" href="" aria-label="تماس با گمرک">
+              <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+                <path d="M7.1 3.8 9.8 3c.6-.2 1.2.1 1.4.7l1.1 3.2c.2.5 0 1.1-.4 1.4l-1.7 1.2a14.4 14.4 0 0 0 4 4l1.2-1.7c.3-.4.9-.6 1.4-.4l3.2 1.1c.6.2.9.8.7 1.4l-.8 2.7c-.2.6-.8 1-1.4 1C11 17.6 6.4 13 6.4 7.3c0-.7.3-1.3.7-1.8Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+            <a class="header-cta lime-cta" href="#platform">دانلود اپلیکیشن</a>
+          </div>
+
+          <button class="mobile-menu-button" type="button" data-mobile-menu aria-expanded="false" aria-controls="mobile-panel">
+            <span class="sr-only">باز کردن منو</span>
+            <span class="menu-lines" aria-hidden="true"><i></i><i></i></span>
+          </button>
+        </div>
+      </header>
+
+      <div class="mobile-panel" id="mobile-panel" data-mobile-panel hidden>
+        <div class="mobile-panel-inner">
+          <p class="mobile-panel-label">پیمایش</p>
+          <a href="#why-terminal">چرا گمرک</a>
+          <a href="#platform">سامانه مدیریت گمرکی</a>
+          <a href="#features">تصمیم‌یار هوشمند گمرکی</a>
+          <a href="#calculator">محاسبه‌گر زمان و هزینه ترخیص</a>
+          <a href="#customers">کاربران سامانه</a>
+          <a href="#contact">ارتباط با ما</a>
+          <details class="mobile-menu-group">
+            <summary>سامانه · شش پنل</summary>
+            <div class="mobile-role-list">
+              <a href="/app/shipper" target="_blank" rel="noopener"><strong>صاحب کالا</strong><span>محموله، اسناد، رهگیری و تسویه</span></a>
+              <a href="/app/forwarder" target="_blank" rel="noopener"><strong>فورواردر</strong><span>RFQ، ظرفیت و اجرای حمل</span></a>
+              <a href="/app/careers" target="_blank" rel="noopener"><strong>کریر</strong><span>ناوگان، راننده و تخصیص سفر</span></a>
+              <a href="/app/driver" target="_blank" rel="noopener"><strong>راننده</strong><span>مأموریت، GPS، POD و مدارک</span></a>
+              <a href="/app/agent" target="_blank" rel="noopener"><strong>نماینده مقصد</strong><span>تحویل، شواهد و مغایرت</span></a>
+              <a href="/admin/v2" target="_blank" rel="noopener"><strong>مدیریت سامانه</strong><span>KYC، ریسک، امنیت و حاکمیت</span></a>
+            </div>
+          </details>
+          <details class="mobile-menu-group">
+            <summary>راهنمای سامانه</summary>
+            <div class="mobile-menu-links">
+              <a href="#why-terminal">سامانه گمرک چیست؟</a>
+              <a href="#platform">پذیرش، اسناد، انبار و ترخیص</a>
+              <a href="#transport-operations">حمل بین‌المللی و رهگیری</a>
+              <a href="#faq">پرسش‌های متداول</a>
+            </div>
+          </details>
+          <details class="mobile-menu-group">
+            <summary>امکانات و مقایسه</summary>
+            <div class="mobile-menu-links">
+              <a href="#transport-operations">مشکل راننده، کریر و فورواردر</a>
+              <a href="#comparison-table">مقایسه رویکردها در بازار</a>
+              <a href="#calculator">محاسبه زمان و هزینه ترخیص</a>
+            </div>
+          </details>
+          <div class="mobile-panel-actions">
+            <a class="lime-cta" href="#platform">معرفی سامانه</a>
+            <a class="light-cta" href="#contact">درخواست مشاوره</a>
+          </div>
+        </div>
+      </div>
+
+      <main id="main-content">
+        <section class="hero-scroll" id="top" data-hero-section aria-labelledby="hero-title">
+          <div class="hero-sticky">
+            <div class="hero-media" aria-hidden="true">
+              <picture class="hero-poster-picture">
+                <source media="(max-width: 800px)" srcset="https://terminal-industries.com/static/frames/home/mobile/webp/hero_anim_mobile_60_0.webp" />
+                <img class="hero-frame-poster" src="https://terminal-industries.com/static/frames/home/desktop/webp/hero_anim_desktop_60_0.webp" alt="" fetchpriority="high" decoding="async" />
+              </picture>
+              <canvas class="hero-canvas" data-hero-canvas></canvas>
+            </div>
+
+            <div class="hero-copy" id="hero-title">
+              <div class="hero-beat-copy" data-hero-copy="0">
+                <p class="eyebrow">عملیات هوشمند گمرکی</p>
+                <h1>ترخیص کالا را<br />از گیت ورودی<br />تا تحویل، هوشمند کنید.</h1>
+              </div>
+              <div class="hero-beat-copy" data-hero-copy="1">
+                <p class="eyebrow">دید یکپارچه</p>
+                <h2>فناوری هوشمندی که فاصله‌ی میان ثبت اظهارنامه و ترخیص کالا را...</h2>
+              </div>
+              <div class="hero-beat-copy" data-hero-copy="2">
+                <p class="eyebrow">یک سامانه یکپارچه</p>
+                <h2>به فرآیندی شفاف، سریع و قابل‌کنترل تبدیل می‌کند.</h2>
+              </div>
+            </div>
+
+            <div class="hero-scroll-indicator" aria-hidden="true">برای مشاهده خدمات اسکرول کنید</div>
+          </div>
+        </section>
+
+        <section class="logo-wall light-section reveal" id="customers" aria-labelledby="customers-title">
+          <div class="section-notch dark-to-light" aria-hidden="true"></div>
+          <div class="section-wrap">
+            <h2 id="customers-title">پشت هر تجارت موفق، یک زنجیره گمرکی شفاف قرار دارد</h2>
+            <div class="logo-grid logo-grid-primary" aria-label="لوگوهای شرکای تجاری منتخب">
+              <img src="https://a.storyblok.com/f/337048/1280x395/5d869ff961/dsv-b-w.svg" alt="DSV" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/170x44/9386c9fae8/lineage.svg" alt="Lineage" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/160x120/90aa0c203e/goodyear2.svg" alt="Goodyear" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/3105x2321/a78fb6a73e/mile-hi.png" alt="Mile Hi" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/3840x2160/a5610b2e1d/honda-logo-2000.png" alt="Honda" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/161x62/44ea74f049/nfi.svg" alt="NFI" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/176x49/27affef2ea/ryder-green.svg" alt="Ryder" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/2500x2500/6c9f6434ea/hp.svg" alt="HP" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/1280x319/621d5efa86/tjx-b-w.svg" alt="TJX" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/249x47/15a7349d4e/prologis.svg" alt="Prologis" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/900x500/fe6a1384ae/vince-logo-vector.png" alt="Vince" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/1366x768/f672774b7b/untitled-design-2.svg" alt="Logistics partner" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/1366x768/3b2ae6c538/rac-b-w-website.svg" alt="RAC" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/1366x768/802a86b588/marc-jacobs2.svg" alt="Marc Jacobs" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/1280x302/92b80c4809/pods-b-w-1.svg" alt="PODS" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/1280x142/4da4eb329e/foxconn-b-w.svg" alt="Foxconn" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/200x100/3cd9d313bd/nine-west-b-w-200-x-100-px-1.svg" alt="Nine West" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/3840x1181/df7256d5e0/kirkland-b-w.svg" alt="Kirkland" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/869x147/26858fd378/db-schenker-2.svg" alt="DB Schenker" loading="lazy" />
+              <img src="https://a.storyblok.com/f/337048/225x225/fc77667383/kasper-logo.png" alt="Kasper" loading="lazy" />
+            </div>
+          </div>
+        </section>
+
+        <section class="pathways-section light-section reveal" id="pathways" aria-labelledby="pathways-title">
+          <div class="section-wrap">
+            <div class="section-heading centered-heading">
+              <h2 id="pathways-title">امروز یکی از گلوگاه‌های گمرکی را برطرف کنید.<br /><span>هر زمان خواستید، خدمات را گسترش دهید.</span></h2>
+            </div>
+            <div class="product-grid">
+              <article class="product-card">
+                <div class="product-card-copy">
+                  <p class="card-label">۰۱ شروع سریع</p>
+                  <h3>کنترل ورودی و پذیرش را سامان دهید</h3>
+                  <p>از ثبت ورود و کنترل اسناد تا هدایت خودرو به مسیر مناسب؛ با همان گلوگاهی شروع کنید که امروز زمان ترخیص را افزایش داده است. با راه‌اندازی مرحله‌ای و کمترین اختلال، فرآیند را شفاف کنید.</p>
+                </div>
+                <img src="https://a.storyblok.com/f/337048/768x432/ce73b10067/gate-entry.jpg/m/1920x0/filters:format(webp):quality(85)" alt="کامیون در حال ورود به محوطه گمرکی" loading="lazy" />
+                <a class="card-cta" href="#contact">شروع کنید</a>
+              </article>
+              <article class="product-card">
+                <div class="product-card-copy">
+                  <p class="card-label">۰۲ توسعه مرحله‌ای</p>
+                  <h3>چند گمرک یا رویه را یکپارچه کنید</h3>
+                  <p>از یک گمرک یا مسیر عملیاتی شروع کنید، نتیجه را بسنجید و طبق اولویت خود به گمرکات، انبارها و رویه‌های دیگر گسترش دهید؛ بدون ایجاد پیچیدگی غیرضروری.</p>
+                </div>
+                <img src="https://a.storyblok.com/f/337048/1272x1196/29dcba4210/yard.png/m/1920x0/filters:format(webp):quality(85)" alt="نمای بالایی از کامیون‌ها در محوطه گمرکی" loading="lazy" />
+                <a class="card-cta" href="#contact">بیشتر بدانید</a>
+              </article>
+              <article class="product-card">
+                <div class="product-card-copy">
+                  <p class="card-label">۰۳ مدیریت شبکه</p>
+                  <h3>عملیات چندگمرکی را از یک دید مدیریت کنید</h3>
+                  <p>یک مرکز کنترل برای مشاهده وضعیت اظهارنامه‌ها، محموله‌ها و گلوگاه‌های عملیاتی؛ همراه با تحلیل و هماهنگی برای تصمیم‌گیری سریع‌تر.</p>
+                </div>
+                <img src="https://a.storyblok.com/f/337048/2034x1150/c561abc6ba/r.webp/m/1920x0/filters:format(webp):quality(85)" alt="نمای هوایی از یک مرکز لجستیکی و گمرکی" loading="lazy" />
+                <a class="card-cta" href="#platform">مدیریت یکپارچه</a>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="roi-section light-section reveal" id="calculator" aria-labelledby="calculator-title">
+          <div class="section-wrap">
+            <div class="section-heading centered-heading">
+              <p class="eyebrow dark-eyebrow">محاسبه‌گر زمان و هزینه ترخیص</p>
+              <h2 id="calculator-title">هزینه‌ی واقعی تأخیر در گمرک چقدر است؟</h2>
+            </div>
+            <div class="roi-layout">
+              <form class="roi-form" id="roi-form">
+                <p class="form-kicker">برآورد عملیاتی</p>
+                <h3>درباره‌ی فرآیند گمرکی خود بگویید:</h3>
+                <div class="input-grid">
+                  <label>تعداد دروازه‌های ورودی و خروجی<input id="roi-gates" type="number" min="1" max="100" value="2" inputmode="numeric" /></label>
+                  <label>شیفت کاری در روز<input id="roi-shifts" type="number" min="1" max="24" value="3" inputmode="numeric" /></label>
+                  <label>روزهای کاری در هفته<input id="roi-days" type="number" min="1" max="7" value="6" inputmode="numeric" /></label>
+                  <label>کارشناس پذیرش و هدایت در هر شیفت<input id="roi-spotters" type="number" min="0" max="100" value="3" inputmode="numeric" /></label>
+                  <label class="wide-field">تعداد محموله‌های روزانه<input id="roi-checkins" type="number" min="1" max="10000" value="45" inputmode="numeric" /></label>
+                  <label class="wide-field">هزینه‌ی عملیاتی ساعتی <span class="currency-prefix">تومان</span><input id="roi-wage" type="number" min="1" max="1000" value="28" inputmode="decimal" /></label>
+                </div>
+                <label class="range-field" for="roi-demurrage">
+                  شدت هزینه‌ی توقف، انبارداری و تأخیر چقدر است؟
+                  <input id="roi-demurrage" type="range" min="1" max="10" value="4" />
+                  <span class="range-labels"><span>۱ - کم</span><span>۵ - متوسط</span><span>۱۰ - زیاد</span></span>
+                </label>
+              </form>
+
+              <aside class="roi-result" aria-live="polite">
+                <p class="result-kicker">صرفه‌جویی سالانه‌ی برآوردشده</p>
+                <div class="roi-total"><span>تومان</span><strong id="roi-total">۶۴۱٬۶۲۶</strong></div>
+                <p class="roi-percent">صرفه‌جویی برآوردی: <strong id="roi-percent">۲۳٪</strong></p>
+                <div class="result-divider"></div>
+                <p class="result-label">برآورد صرفه‌جویی بر اساس حوزه:</p>
+                <dl class="savings-list">
+                  <div><dt>کاهش هزینه‌ی نیروی انسانی <small>(پذیرش، ارزیابی و کنترل)</small></dt><dd id="roi-labor">۲۵۵٬۵۲۸ تومان</dd></div>
+                  <div><dt>کاهش هزینه‌ی جابه‌جایی و هدایت <small>(خودروها و تجهیزات)</small></dt><dd id="roi-spotter">۱۹۳٬۲۴۸ تومان</dd></div>
+                  <div><dt>کاهش هزینه‌ی توقف و انبارداری</dt><dd id="roi-detention">۱۹۲٬۸۵۰ تومان</dd></div>
+                </dl>
+                <div class="roi-capture">
+                  <h3>گزارش دقیق‌تری می‌خواهید؟</h3>
+                  <p>ایمیل کاری خود را وارد کنید تا یکی از کارشناسان گمرکی ما، برآورد اختصاصی زمان و هزینه‌ی فرآیند شما را آماده کند.</p>
+                  <form id="roi-email-form">
+                    <label class="sr-only" for="roi-email">ایمیل کاری</label>
+                    <input id="roi-email" type="email" placeholder="name@company.com" autocomplete="email" required />
+                    <button type="submit">ارسال</button>
+                  </form>
+                  <p class="form-message" id="roi-message" aria-live="polite"></p>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section class="why-section light-section reveal" id="why-terminal" aria-labelledby="why-title">
+          <div class="section-notch light-notch" aria-hidden="true"></div>
+          <div class="section-wrap narrow-wrap">
+            <p class="eyebrow dark-eyebrow">چرا گمرک</p>
+            <h2 id="why-title">معرفی سامانه‌ی هوشمند گمرک</h2>
+            <p class="section-lead">سامانه‌ی هوشمند گمرک با یکپارچه‌سازی داده‌های اظهارنامه، کنترل ورودی، ارزیابی ریسک و وضعیت محموله، فرآیندهای پراکنده و دستی را به عملیات گمرکی شفاف، سریع و قابل‌پیگیری تبدیل می‌کند. مزایای کلیدی آن:</p>
+          </div>
+        </section>
+
+        <section class="features-section light-section" id="features" aria-labelledby="features-title">
+          <div class="feature-stage">
+            <div class="feature-copy">
+              <div class="feature-intro">
+                <p class="feature-index">۰۱ / ۰۴</p>
+                <h2 id="features-title">گمرکی که حرکت بعدی را می‌بیند.</h2>
+              </div>
+              <div class="feature-list" data-feature-list>
+                <article class="feature-step is-active" data-feature-step="0">
+                  <p class="feature-step-title">هماهنگی اجرای تشریفات گمرکی</p>
+                  <p>داده‌های ورود، اسناد، مسیر ارزیابی و وضعیت محموله را از پذیرش تا ترخیص به هم متصل می‌کند تا صف‌های ورودی کوتاه‌تر و تصمیم‌های عملیاتی سریع‌تر شوند.</p>
+                </article>
+                <article class="feature-step" data-feature-step="1">
+                  <p class="feature-step-title">سامانه متناسب با فرآیند خود را بسازید</p>
+                  <p>با ماژول‌هایی شروع کنید که بیشترین نیاز را پوشش می‌دهند و هم‌زمان با رشد عملیات، سامانه را توسعه دهید؛ از کنترل ورودی و اسناد تا داشبورد مدیریت، با راه‌اندازی مرحله‌ای.</p>
+                </article>
+                <article class="feature-step" data-feature-step="2">
+                  <p class="feature-step-title">کارهای دستی و تکراری را کاهش دهید</p>
+                  <p>گردش‌کارهای دیجیتال، ورود دوباره‌ی اطلاعات، پیگیری‌های تلفنی و کنترل‌های دستی را کم می‌کنند تا کارشناسان بر ارزیابی، نظارت و تصمیم‌های مهم تمرکز کنند.</p>
+                </article>
+                <article class="feature-step" data-feature-step="3">
+                  <p class="feature-step-title">شفافیت و بهره‌وری قابل‌اندازه‌گیری</p>
+                  <p>با شاخص‌هایی مانند زمان چرخه‌ی ترخیص، ماندگاری محموله، حجم عملیات و نقاط گلوگاهی، اثر بهبودها را در بازه‌های واقعی اندازه بگیرید.</p>
+                </article>
+              </div>
+            </div>
+            <div class="feature-visual" aria-label="توالی ویدئوهای عملیات گمرکی">
+              <div class="feature-visual-frame">
+                <video class="feature-video is-active" data-feature-video muted loop playsinline preload="auto" fetchpriority="high"
+                  src="https://a.storyblok.com/f/337048/x/f0f51ea10f/vid_3-1_prerender_1.mp4"></video>
+                <video class="feature-video" data-feature-video muted loop playsinline preload="none"
+                  src="https://a.storyblok.com/f/337048/x/5c039660e1/vid_3-3_prerender_1.mp4"></video>
+                <video class="feature-video" data-feature-video muted loop playsinline preload="none"
+                  src="https://a.storyblok.com/f/337048/x/daeedd63c8/vid_3-5_prerender_1.mp4"></video>
+                <video class="feature-video" data-feature-video muted loop playsinline preload="none"
+                  src="https://a.storyblok.com/f/337048/x/5d1992bef6/vid_3-2_prerender_1.mp4"></video>
+                <div class="feature-visual-overlay">
+                  <span>کنترل هوشمند / فعال</span>
+                  <span data-feature-status>ورودی و پذیرش</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="platform-section light-section reveal" id="platform" aria-labelledby="platform-title">
+          <div class="section-wrap">
+            <div class="section-heading centered-heading">
+              <p class="eyebrow dark-eyebrow">سامانه</p>
+              <h2 id="platform-title">یک سامانه‌ی یکپارچه<br /><span>برای مدیریت همه‌ی فرآیندهای گمرکی</span></h2>
+              <p>فرآیندهای گمرکی را مرحله‌به‌مرحله و با افزودن هر ماژول توسعه دهید. از پذیرش و کنترل ورودی شروع کنید و هم‌زمان با رشد عملیات، ارزیابی ریسک، مدیریت اسناد، انبار و ترخیص را یکپارچه کنید. گمرک برای ایجاد دید کامل از وضعیت اظهارنامه‌ها، محموله‌ها و عملکرد واحدها طراحی شده است.</p>
+            </div>
+            <div class="platform-controls">
+              <div class="platform-tabs" role="tablist" aria-label="بخش‌های سامانه">
+                <button class="platform-tab is-active" type="button" role="tab" aria-selected="true" data-platform-tab="0">پذیرش و ورودی</button>
+                <button class="platform-tab" type="button" role="tab" aria-selected="false" data-platform-tab="1">اسناد و ارزیابی</button>
+                <button class="platform-tab" type="button" role="tab" aria-selected="false" data-platform-tab="2">انبار و بارگیری</button>
+                <button class="platform-tab" type="button" role="tab" aria-selected="false" data-platform-tab="3">در کل فرآیند</button>
+              </div>
+              <div class="carousel-buttons">
+                <button type="button" aria-label="بخش قبلی سامانه" data-platform-prev disabled>→</button>
+                <button type="button" aria-label="بخش بعدی سامانه" data-platform-next>←</button>
+              </div>
+            </div>
+            <div class="platform-viewport">
+              <div class="platform-track" data-platform-track>
+                <article class="platform-card is-active" data-platform-card="0" role="tabpanel">
+                  <img src="https://a.storyblok.com/f/337048/768x432/ce73b10067/gate-entry.jpg/m/1920x0/filters:format(webp):quality(85)" alt="کامیون در حال عبور از گیت گمرکی" loading="lazy" />
+                  <div class="platform-card-copy"><p class="card-label">پذیرش و ورودی</p><h3>پذیرش سریع و کنترل هوشمند ورودی</h3><p>ورود و خروج خودروها و محموله‌ها را ثبت و هماهنگ کنید، اطلاعات را با اسناد تطبیق دهید و صف‌های ورودی را با مسیرهای شفاف و قابل‌کنترل کاهش دهید.</p><a href="#contact">بیشتر <span aria-hidden="true">↗</span></a></div>
+                </article>
+                <article class="platform-card" data-platform-card="1" role="tabpanel">
+                  <img src="https://a.storyblok.com/f/337048/1272x1196/29dcba4210/yard.png/m/1920x0/filters:format(webp):quality(85)" alt="نمای هوشمند از محوطه گمرکی" loading="lazy" />
+                  <div class="platform-card-copy"><p class="card-label">اسناد و ارزیابی</p><h3>مدیریت اسناد و ارزیابی ریسک</h3><p>اظهارنامه‌ها، مجوزها و وضعیت بررسی را در یک نمای به‌روز دنبال کنید و پرونده‌های نیازمند توجه را سریع‌تر به کارشناس مربوط بسپارید.</p><a href="#contact">بیشتر <span aria-hidden="true">↗</span></a></div>
+                </article>
+                <article class="platform-card" data-platform-card="2" role="tabpanel">
+                  <img src="https://a.storyblok.com/f/337048/565x336/e5f3b11568/dock-doors.png/m/1920x0/filters:format(png):quality(85)" alt="انبار و محل بارگیری محموله‌های گمرکی" loading="lazy" />
+                  <div class="platform-card-copy"><p class="card-label">انبار و بارگیری</p><h3>کنترل موجودی و جابه‌جایی محموله‌ها</h3><p>موقعیت محموله، ورود به انبار، بازرسی و خروج را در یک جریان هماهنگ مدیریت کنید تا توقف و خطای ثبت کاهش یابد.</p><a href="#contact">بیشتر <span aria-hidden="true">↗</span></a></div>
+                </article>
+                <article class="platform-card" data-platform-card="3" role="tabpanel">
+                  <img src="https://a.storyblok.com/f/337048/2034x1150/c561abc6ba/r.webp/m/1920x0/filters:format(webp):quality(85)" alt="نمای یکپارچه از عملیات گمرکی" loading="lazy" />
+                  <div class="platform-card-copy"><p class="card-label">در کل فرآیند</p><h3>داشبورد یکپارچه برای تصمیم‌های گمرکی</h3><p>وضعیت گمرکات، پرونده‌ها و گلوگاه‌ها را در یک مرکز کنترل ببینید تا مدیران و تیم‌های عملیاتی تصمیم‌های دقیق‌تری بگیرند.</p><a href="#contact">بیشتر <span aria-hidden="true">↗</span></a></div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="transport-section light-section reveal" id="transport-operations" aria-labelledby="transport-title">
+          <div class="section-wrap">
+            <div class="section-heading centered-heading">
+              <p class="eyebrow dark-eyebrow">حمل‌ونقل بین‌المللی و گمرک</p>
+              <h2 id="transport-title">یک زنجیره برای استعلام، حمل، ترخیص و تحویل</h2>
+              <p class="section-lead">سامانه گمرک فقط وضعیت ترخیص را نمایش نمی‌دهد؛ ظرفیت حمل، پیشنهاد قیمت، اسناد، نقاط کنترل و شواهد تحویل را به یک جریان نسخه‌دار وصل می‌کند تا هر نقش، فقط داده و اقدام مجاز خودش را ببیند.</p>
+            </div>
+            <div class="transport-role-grid">
+              <article class="transport-role-card">
+                <p class="card-label">برای راننده</p>
+                <h3>بار مناسب، مسیر روشن، انتظار کمتر</h3>
+                <p>فرصت‌های متناسب با نوع خودرو، ظرفیت، مسیر و زمان آزاد را دریافت می‌کند؛ مبلغ، خدمات، نقطه‌های عملیاتی و وضعیت پرداخت در یک پرونده قابل‌پیگیری ثبت می‌شود.</p>
+              </article>
+              <article class="transport-role-card">
+                <p class="card-label">برای کریر</p>
+                <h3>ظرفیت و ناوگان تحت کنترل</h3>
+                <p>ظرفیت خالی، مدارک راننده و خودرو، تخصیص سفر، آماده‌سازی، بارگیری، رهگیری و شواهد تحویل را بدون فایل‌های پراکنده و تماس‌های تکراری مدیریت می‌کند.</p>
+              </article>
+              <article class="transport-role-card">
+                <p class="card-label">برای فورواردر و صاحب کالا</p>
+                <h3>قیمت‌گیری قابل‌مقایسه و دید کامل</h3>
+                <p>استعلام را با اطلاعات کافی منتشر می‌کند، پیشنهادها را بر اساس مبلغ و خدمات مقایسه می‌کند و اثر زمان‌بندی گمرک، حمل و تحویل را در یک نمای واحد می‌بیند.</p>
+              </article>
+            </div>
+            <div class="transport-comparison" id="comparison-table">
+              <div class="transport-comparison-heading">
+                <div><p class="card-label">مقایسه شفاف رویکردها</p><h3>چه چیزی نسبت به ابزارهای جزیره‌ای بهتر می‌شود؟</h3></div>
+                <a class="card-cta" href="#contact">درخواست معرفی سامانه <span aria-hidden="true">↗</span></a>
+              </div>
+              <div class="comparison-table-wrap">
+                <table class="comparison-table comparison-table--large">
+                  <caption class="sr-only">مقایسه راهکارهای داخلی جزیره‌ای، پلتفرم‌های بین‌المللی حمل و سامانه گمرک</caption>
+                  <thead><tr><th scope="col">مسئله عملیاتی</th><th scope="col">راهکارهای داخلی جزیره‌ای</th><th scope="col">پلتفرم‌های بین‌المللی حمل</th><th scope="col">سامانه گمرک</th></tr></thead>
+                  <tbody>
+                    <tr><th scope="row">راننده و سفر برگشتی</th><td>اطلاعات بار و مسیر در کانال‌های جدا</td><td>تمرکز بر تخصیص حمل در شبکه خود</td><td>تطبیق ظرفیت، مسیر، زمان و اسناد در یک فرصت مجاز</td></tr>
+                    <tr><th scope="row">کریر و ظرفیت ناوگان</th><td>فایل، تماس و ثبت تکراری</td><td>داده وابسته به بازار یا کشور مقصد</td><td>ظرفیت، KYC، تخصیص، رهگیری و شواهد نسخه‌دار</td></tr>
+                    <tr><th scope="row">فورواردر و قیمت‌گیری</th><td>جمع‌آوری دستی پیشنهادها</td><td>قیمت عمومی با قواعد متفاوت</td><td>RFQ ساختاریافته، نسخه پیشنهاد و مقایسه خدمات</td></tr>
+                    <tr><th scope="row">گمرک و تحویل</th><td>اتصال محدود به عملیات حمل</td><td>پوشش متفاوت مقررات محلی</td><td>اتصال رویدادهای گمرک، حمل، اسناد و POD با کنترل نقش</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="comparison-note">این جدول مقایسه‌ی رویکرد و دامنه‌ی راهکارهاست، نه ادعای رتبه‌بندی یا تضمین قیمت در برابر یک برند مشخص؛ دامنه نهایی بر اساس فرآیند، اتصال‌ها و سیاست‌های هر سازمان تعیین می‌شود.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="industry-intro light-section reveal" aria-labelledby="industry-title">
+          <div class="section-notch light-notch" aria-hidden="true"></div>
+          <div class="section-wrap narrow-wrap">
+            <p class="eyebrow dark-eyebrow">ساخته‌شده برای تجربه‌ی واقعی گمرک</p>
+            <h2 id="industry-title">ساخته‌شده برای استانداردی شفاف‌تر در تجارت و ترخیص</h2>
+          </div>
+        </section>
+
+        <section class="industry-logos light-section reveal" aria-label="لوگوهای شرکای تجاری">
+          <div class="logo-grid logo-grid-secondary">
+            <img src="https://a.storyblok.com/f/337048/114x45/04e08dca33/8vc.svg" alt="8VC" loading="lazy" />
+            <img src="https://a.storyblok.com/f/337048/176x49/27affef2ea/ryder-green.svg" alt="Ryder" loading="lazy" />
+            <img src="https://a.storyblok.com/f/337048/170x44/9386c9fae8/lineage.svg" alt="Lineage" loading="lazy" />
+            <img src="https://a.storyblok.com/f/337048/249x47/15a7349d4e/prologis.svg" alt="Prologis" loading="lazy" />
+            <img src="https://a.storyblok.com/f/337048/161x62/44ea74f049/nfi.svg" alt="NFI" loading="lazy" />
+          </div>
+        </section>
+
+        <section class="quote-section reveal" id="quote" aria-labelledby="quote-title">
+          <div class="quote-overlay"></div>
+          <div class="quote-inner">
+            <p class="quote-mark" aria-hidden="true">“</p>
+            <h2 id="quote-title">وقتی وضعیت اسناد، محموله و صف ورودی در یک نما دیده می‌شود، تصمیم‌گیری روزانه دقیق‌تر و پاسخ‌گویی به صاحبان کالا سریع‌تر می‌شود.</h2>
+            <p class="quote-author">دیدگاه عملیاتی</p>
+            <p class="quote-role">برای مدیریت گمرک و فرآیند ترخیص</p>
+          </div>
+        </section>
+
+        <section class="contact-section light-section reveal" id="contact" aria-labelledby="contact-title">
+          <div class="section-wrap contact-layout">
+            <div class="contact-copy">
+              <h2 id="contact-title">برای گمرک شفاف‌تر<br /><span>با ما در ارتباط باشید</span></h2>
+              <p>فرم را تکمیل کنید تا درباره‌ی اینکه سامانه گمرک چگونه می‌تواند کنترل ورودی، اسناد، ارزیابی ریسک و ترخیص را برای مجموعه‌ی شما یکپارچه کند، گفت‌وگو کنیم:</p>
+              <ul class="contact-benefits">
+                <li>جلسه‌ی معرفی ۳۰ دقیقه‌ای</li>
+                <li>بررسی فرآیندهای فعلی</li>
+                <li>برآورد زمان و هزینه‌ی ترخیص</li>
+              </ul>
+              <p class="trusted-copy">طراحی‌شده برای تیم‌های گمرکی و زنجیره تجارت.</p>
+              <div class="contact-logos" aria-label="لوگوهای شرکای تجاری منتخب">
+                <img src="https://a.storyblok.com/f/337048/176x49/27affef2ea/ryder-green.svg" alt="Ryder" loading="lazy" />
+                <img src="https://a.storyblok.com/f/337048/3840x2160/a5610b2e1d/honda-logo-2000.png" alt="Honda" loading="lazy" />
+                <img src="https://a.storyblok.com/f/337048/170x44/9386c9fae8/lineage.svg" alt="Lineage" loading="lazy" />
+                <img src="https://a.storyblok.com/f/337048/1280x395/5d869ff961/dsv-b-w.svg" alt="DSV" loading="lazy" />
+                <img src="https://a.storyblok.com/f/337048/161x62/44ea74f049/nfi.svg" alt="NFI" loading="lazy" />
+              </div>
+            </div>
+
+            <form class="contact-form" id="contact-form" novalidate>
+              <div class="form-row">
+                <label>نام و نام خانوادگی <span>*</span><input id="contact-name" name="name" type="text" autocomplete="name" required placeholder="نام شما" /></label>
+                <label>سمت یا مسئولیت <span>*</span><input id="contact-role" name="role" type="text" required placeholder="سمت شما" /></label>
+              </div>
+              <div class="form-row">
+                <label>شماره تلفن<input id="contact-phone" name="phone" type="tel" autocomplete="tel" placeholder="+۹۸" /></label>
+                <label>ایمیل <span>*</span><input id="contact-email" name="email" type="email" autocomplete="email" required placeholder="name@company.com" /></label>
+              </div>
+              <label>نام سازمان یا شرکت <span>*</span><input id="contact-company" name="company" type="text" autocomplete="organization" required placeholder="نام سازمان یا شرکت شما" /></label>
+              <label>در کدام بخش گمرکی به راهکار نیاز دارید؟ <span>*</span>
+                <select id="contact-help" name="help" required>
+                  <option value="" selected disabled>یک گزینه را انتخاب کنید</option>
+                  <option>برگزاری جلسه‌ی ۳۰ دقیقه‌ای با کارشناس گمرکی</option>
+                  <option>درخواست معرفی سامانه‌ی هوشمند گمرک</option>
+                  <option>دریافت برآورد زمان و هزینه‌ی ترخیص</option>
+                  <option>بررسی راه‌اندازی آزمایشی در یک گمرک</option>
+                  <option>موضوعی دیگر</option>
+                </select>
+              </label>
+              <button class="form-submit" type="submit">ارسال</button>
+              <p class="form-message" id="contact-message" aria-live="polite"></p>
+            </form>
+          </div>
+        </section>
+
+        <section class="faq-section light-section reveal" id="faq" aria-labelledby="faq-title">
+          <div class="section-wrap faq-layout">
+            <div class="faq-intro">
+              <h2 id="faq-title">پرسش‌های متداول</h2>
+              <p>پاسخ پرسش‌های رایج تیم‌ها پیش از شروع کار با سامانه گمرک را اینجا می‌بینید.</p>
+            </div>
+            <div class="faq-content">
+              <div class="faq-tabs" role="tablist" aria-label="دسته‌بندی پرسش‌ها">
+                <button class="faq-tab is-active" type="button" role="tab" aria-selected="true" data-faq-tab="all">فناوری</button>
+                <button class="faq-tab" type="button" role="tab" aria-selected="false" data-faq-tab="value">مزایا</button>
+                <button class="faq-tab" type="button" role="tab" aria-selected="false" data-faq-tab="implementation">راه‌اندازی</button>
+                <button class="faq-tab" type="button" role="tab" aria-selected="false" data-faq-tab="operations">عملیات گمرک</button>
+              </div>
+              <div class="faq-list">
+                <div class="faq-row" data-faq-category="technology value">
+                  <button class="faq-question" type="button" aria-expanded="false">سامانه‌ی گمرک دقیقاً چه کاری انجام می‌دهد؟<span aria-hidden="true">＋</span></button>
+                  <div class="faq-answer" hidden>سامانه‌ی گمرک داده‌های ورود، اسناد، ارزیابی، انبار و ترخیص را در یک جریان یکپارچه جمع می‌کند تا وضعیت هر محموله و اقدام بعدی برای تیم مربوط روشن باشد.</div>
+                </div>
+                <div class="faq-row" data-faq-category="technology value">
+                  <button class="faq-question" type="button" aria-expanded="false">این سامانه چه تفاوتی با ثبت دستی و ابزارهای جزیره‌ای دارد؟<span aria-hidden="true">＋</span></button>
+                  <div class="faq-answer" hidden>ثبت‌های دستی و ابزارهای جداگانه معمولاً تصویر کاملی از وضعیت پرونده و محموله نمی‌دهند؛ این سامانه داده‌های عملیاتی را کنار هم می‌گذارد، پیگیری‌ها را شفاف می‌کند و نقاط گلوگاهی را قابل‌اندازه‌گیری می‌سازد.</div>
+                </div>
+                <div class="faq-row" data-faq-category="technology">
+                  <button class="faq-question" type="button" aria-expanded="false">هوشمندسازی و ارزیابی ریسک در گمرک یعنی چه؟<span aria-hidden="true">＋</span></button>
+                  <div class="faq-answer" hidden>سامانه بر اساس قواعد و داده‌های موجود، پرونده‌های نیازمند توجه را اولویت‌بندی می‌کند و اطلاعات لازم را در اختیار کارشناس می‌گذارد؛ تصمیم نهایی همچنان با کارشناس و مقررات مربوط است.</div>
+                </div>
+                <div class="faq-row" data-faq-category="technology value">
+                  <button class="faq-question" type="button" aria-expanded="false">داده‌های ثبت‌شده توسط سامانه چقدر دقیق هستند؟<span aria-hidden="true">＋</span></button>
+                  <div class="faq-answer" hidden>دقت به کیفیت داده‌های ورودی و اتصال به منابع رسمی وابسته است. سامانه با اعتبارسنجی، ثبت رویداد و کنترل مغایرت، خطای ورود دوباره و پیگیری دستی را کاهش می‌دهد.</div>
+                </div>
+                <div class="faq-row" data-faq-category="implementation operations">
+                  <button class="faq-question" type="button" aria-expanded="false">آیا می‌توانیم چند گمرک یا واحد را با یک ورود مدیریت کنیم؟<span aria-hidden="true">＋</span></button>
+                  <div class="faq-answer" hidden>در صورت تعریف دسترسی و اتصال‌های لازم، مدیران می‌توانند شاخص‌ها و وضعیت واحدهای مجاز را در یک نمای مرکزی مقایسه کنند؛ دسترسی هر کاربر بر اساس نقش و سطح سازمانی تنظیم می‌شود.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-notch" aria-hidden="true"></div>
+        <div class="section-wrap footer-inner">
+          <div class="footer-cta-block">
+            <h2>گمرک شفاف‌تر<br />از امروز شروع می‌شود.</h2>
+            <a class="footer-cta" href="#contact">فرآیند گمرکی خود را یکپارچه کنید <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="footer-grid">
+            <div class="footer-brand-block">
+              <a class="brand footer-brand" href="#top" aria-label="صفحه اصلی گمرک">
+                <svg class="footer-brand-mark" viewBox="0 0 48 49" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M9.16512 0C8.26239 0 7.39524 0.369725 6.75488 1.02245L1.00056 6.92436C0.360201 7.58165 0 8.47629 0 9.40289V48.0871C0 48.5892 0.400223 49 0.889385 49H34.3481C35.2508 49 36.1179 48.6303 36.7583 47.973L46.7416 37.7211C47.382 37.0684 47.7422 36.1737 47.7422 35.2471V0.912902C47.7422 0.410806 47.342 0 46.8528 0H9.16512ZM40.9206 16.0123C40.9206 16.8339 40.2714 17.5003 39.4709 17.5003H22.1324C21.3586 17.5003 20.6604 18.1531 20.6827 18.9473C20.696 19.2942 20.8339 19.6137 21.0518 19.8556C21.074 19.8784 21.0918 19.9013 21.1185 19.9241L28.5626 27.5696C28.8339 27.8481 28.9895 28.2269 28.9895 28.6195V40.5191C28.9895 41.3408 28.3403 42.0072 27.5398 42.0072H20.2068C19.4064 42.0072 18.7571 41.3408 18.7571 40.5191V18.9929C18.7571 18.1713 18.1079 17.5049 17.3074 17.5049H8.27128C7.47084 17.5049 6.82159 16.8385 6.82159 16.0169V8.48999C6.82159 7.66838 7.47084 7.00196 8.27128 7.00196H18.1568C18.5437 7.00196 18.9128 7.15715 19.184 7.44015L26.6149 15.0674C26.6415 15.0994 26.6771 15.1359 26.7082 15.1633C26.9306 15.3733 27.224 15.5056 27.5487 15.5285C28.3403 15.5741 28.9895 14.8529 28.9895 14.0404V8.49455C28.9895 7.67294 29.6388 7.00652 30.4392 7.00652H39.4754C40.2758 7.00652 40.9251 7.67294 40.9251 8.49455V16.0214L40.9206 16.0123Z" fill="currentColor" />
+                </svg>
+                <span class="brand-name">گمرک</span>
+              </a>
+              <p class="market-guide"><span class="gartner-wordmark">گمرک</span><span>مدیریت یکپارچه<br />اسناد و محموله‌ها<br />برای تجارت شفاف</span></p>
+            </div>
+            <div class="footer-column">
+              <p class="footer-label">سامانه</p>
+              <a href="#top">صفحه‌ی اصلی</a>
+              <a href="#platform">مدیریت عملیات گمرکی</a>
+              <a href="#features">تصمیم‌یار هوشمند گمرکی</a>
+              <a href="#calculator">محاسبه‌گر زمان و هزینه ترخیص</a>
+            </div>
+            <div class="footer-column">
+              <p class="footer-label">درباره سامانه</p>
+              <a href="#why-terminal">درباره گمرک</a>
+              <a href="#customers">راهنما</a>
+              <a href="#contact">تماس</a>
+            </div>
+            <div class="footer-column">
+              <p class="footer-label">ارتباط با ما</p>
+              <a href="#contact">برای گمرکی شفاف‌تر آماده‌اید؟</a>
+              <a href="#contact">تماس با کارشناسان</a>
+              <p>همین امروز درباره‌ی فرآیندهای گمرکی خود گفت‌وگو کنید.</p>
+              <div class="social-links">
+                <a href="https://www.linkedin.com/company/terminal-industries/" target="_blank" rel="noreferrer">LinkedIn</a>
+                <a href="https://x.com/Terminal_Indust" target="_blank" rel="noreferrer">X</a>
+                <a href="https://www.youtube.com/@Terminal-Industries" target="_blank" rel="noreferrer">YouTube</a>
+              </div>
+            </div>
+          </div>
+          <div class="footer-bottom">
+            <span>حق نشر گمرک © ۱۴۰۵؛ تمامی حقوق محفوظ است</span>
+            <a href="#top">بازگشت به بالا</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

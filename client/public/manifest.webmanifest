@@ -3,7 +3,7 @@
   "short_name": "GOMROK راننده",
   "lang": "fa",
   "dir": "rtl",
-  "start_url": "/app/driver",
+  "start_url": "/app/",
   "scope": "/app/",
   "display": "standalone",
   "background_color": "#ededff",

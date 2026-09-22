@@ -11,11 +11,18 @@
     "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "npm --workspace client run dev",
     "dev:server": "npm --workspace server run dev",
-    "test": "npm --workspace server test",
+    "test": "npm --workspace server test && npm run test:client",
+    "test:client": "node --test client/test/*.test.js",
     "build": "npm --workspace client run build",
+    "api:validate": "redocly lint openapi/gomrok-platform-v1.yaml --max-problems=200",
+    "db:migrate:annex:plan": "node server/src/migrations/annex/cli.js --dry-run",
     "start": "npm --workspace server run start"
   },
   "devDependencies": {
+    "@redocly/cli": "2.51.2",
     "concurrently": "^9.1.2"
+  },
+  "overrides": {
+    "qs": "6.16.0"
   }
 }

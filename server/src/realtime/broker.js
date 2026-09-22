@@ -36,7 +36,7 @@ function visibleToSubscriber(event, subscriber) {
   return orgIds.has(String(subscriber.organizationId)) || userIds.has(String(subscriber.userId));
 }
 
-export function subscribeRealtime(actor, send) {
+export function subscribeRealtime(actor, send, close = () => {}) {
   if (subscribers.size >= maxConnections) {
     const error = new Error('ظرفیت اتصال بلادرنگ این نمونه تکمیل است.');
     error.code = 'RT-429';
@@ -49,9 +49,29 @@ export function subscribeRealtime(actor, send) {
     organizationId: actor.organizationId,
     userId: actor.userId,
     role: actor.role,
-    send
+    sessionId: actor.sessionId || null,
+    sessionGeneration: Number.isSafeInteger(actor.sessionGeneration) ? actor.sessionGeneration : null,
+    send,
+    close
   });
   return () => subscribers.delete(id);
+}
+
+export function invalidateRealtimeSession(sessionId, minimumGeneration) {
+  if (!sessionId || !Number.isSafeInteger(minimumGeneration)) return 0;
+  let invalidated = 0;
+  for (const [id, subscriber] of subscribers.entries()) {
+    if (subscriber.sessionId !== sessionId) continue;
+    if (!Number.isSafeInteger(subscriber.sessionGeneration) || subscriber.sessionGeneration >= minimumGeneration) continue;
+    subscribers.delete(id);
+    invalidated += 1;
+    try {
+      subscriber.close();
+    } catch (_error) {
+      // The subscription is already removed; transport cleanup is best-effort.
+    }
+  }
+  return invalidated;
 }
 
 export function publishPlatformEvent({

@@ -1,25 +1,57 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { provinces } from './data/iranLocations.js';
 import PlatformWorkspace from './components/PlatformWorkspace.jsx';
+import CargoInquiryPage from './components/CargoInquiryPage.jsx';
 import { Icon, ProductLogo } from './components/ProductIcon.jsx';
 const AdminGovernancePanel = lazy(() => import('./components/AdminGovernancePanel.jsx'));
 
 const APP_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+const ASSET_BASE = import.meta.env.PROD ? APP_BASE : '';
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? APP_BASE : 'http://127.0.0.1:4000');
 const onboardingVisuals = {
   driver: {
-    src: `${APP_BASE}/images/gomrok-driver-onboarding.jpg`,
+    src: `${ASSET_BASE}/images/gomrok-driver-onboarding.jpg`,
     width: 1536,
     height: 1024,
     alt: 'راننده حرفه‌ای در کنار کامیون باری در شبکه حمل‌ونقل گمرک'
   },
   carrier: {
-    src: `${APP_BASE}/images/gomrok-carrier-onboarding.jpg`,
+    src: `${ASSET_BASE}/images/gomrok-carrier-onboarding.jpg`,
     width: 1774,
     height: 887,
     alt: 'مدیر ناوگان و کامیون‌ها در پایانه عملیاتی شرکت حمل'
   }
 };
+const registrationStepVisuals = [
+  {
+    src: `${ASSET_BASE}/images/registration-steps/identity-verification.png`,
+    title: 'اطلاعات پایه',
+    caption: 'هویت و مشخصات اولیه',
+    icon: 'identity',
+    alt: 'راننده حرفه‌ای در کنار کامیون و تلفن همراه برای تأیید هویت'
+  },
+  {
+    src: `${ASSET_BASE}/images/registration-steps/document-upload.png`,
+    title: 'آپلود مدارک',
+    caption: 'مدارک خوانا و امن',
+    icon: 'upload',
+    alt: 'ثبت مدارک حمل‌ونقل روی میز کار در کنار کامیون'
+  },
+  {
+    src: `${ASSET_BASE}/images/registration-steps/profile-review.png`,
+    title: 'بررسی اطلاعات',
+    caption: 'کنترل توسط تیم عملیات',
+    icon: 'audit',
+    alt: 'بررسی اطلاعات پروفایل حمل‌ونقل توسط تیم عملیات'
+  },
+  {
+    src: `${ASSET_BASE}/images/registration-steps/account-activation.png`,
+    title: 'ایجاد حساب',
+    caption: 'شروع مسیر تأییدشده',
+    icon: 'check',
+    alt: 'کامیون آبی در حال شروع مسیر از پایانه امن'
+  }
+];
 const emptyRegistration = {
   firstName: '',
   lastName: '',
@@ -37,8 +69,143 @@ const emptyCarrierRegistration = {
   province: ''
 };
 
+const SESSION_TOKEN_KEY = 'gomrok-session-token';
+const SESSION_REFRESH_TOKEN_KEY = 'gomrok-session-refresh-token';
+const SESSION_USER_KEY = 'gomrok-session-user';
+const LOGIN_PHONE_KEYS = { driver: 'gomrok-login-phone-driver', carrier: 'gomrok-login-phone-carrier' };
+
+const PANEL_ENTRY_ROUTES = {
+  shipper: {
+    path: '/app/shipper',
+    title: 'پنل صاحب کالا',
+    eyebrow: 'فضای اختصاصی صاحب کالا',
+    description: 'محموله، اسناد، وضعیت حمل، مغایرت‌ها و تسویه فقط در محدوده سازمان شما نمایش داده می‌شود.',
+    accessNote: 'ورود این پنل با عضویت سازمانی و احراز هویت سرور انجام می‌شود.',
+    login: {
+      icon: 'cargo',
+      visualRole: 'carrier',
+      visualClass: 'shipper',
+      heading: 'خوش آمدید، صاحب کالا',
+      description: 'برای مدیریت محموله‌ها، اسناد و وضعیت حمل وارد فضای سازمانی خود شوید.',
+      cardTitle: 'ورود به فضای صاحب کالا',
+      fieldLabel: 'ایمیل کاری یا شماره موبایل',
+      fieldPlaceholder: 'ایمیل کاری یا شماره موبایل را وارد کنید',
+      visualHeadline: 'محموله، سند و مسیر در یک دید.',
+      visualCaption: 'ورود امن به فضای عملیاتی صاحب کالا'
+    },
+    roles: ['shipper_admin', 'shipper_logistics_user', 'shipper_finance_user', 'consignee']
+  },
+  forwarder: {
+    path: '/app/forwarder',
+    title: 'پنل فورواردر / شرکت X',
+    eyebrow: 'فضای اختصاصی فورواردر',
+    description: 'برنامه‌ریزی محموله، RFQ، قرارداد، ظرفیت و اجرای حمل را در محدوده شرکت X مدیریت کنید.',
+    accessNote: 'قیمت‌ها و داده‌های بازار فقط پس از احراز نقش و مجوز مربوط بارگذاری می‌شوند.',
+    login: {
+      icon: 'organization',
+      visualRole: 'carrier',
+      visualClass: 'forwarder',
+      heading: 'خوش آمدید، فورواردر',
+      description: 'RFQ، قرارداد، ظرفیت و اجرای حمل شرکت X را در یک فضای عملیاتی کنترل کنید.',
+      cardTitle: 'ورود به فضای فورواردر / شرکت X',
+      fieldLabel: 'ایمیل کاری یا شماره موبایل',
+      fieldPlaceholder: 'ایمیل کاری یا شماره موبایل را وارد کنید',
+      visualHeadline: 'از درخواست حمل تا قرارداد، یک مسیر روشن.',
+      visualCaption: 'ورود امن به مرکز عملیات فورواردر'
+    },
+    roles: ['company_x_owner', 'company_x_operations_manager', 'company_x_pricing_expert', 'company_x_dispatcher', 'company_x_document_expert']
+  },
+  carrier: {
+    path: '/app/careers',
+    title: 'پنل کریر / شرکت Y',
+    eyebrow: 'فضای اختصاصی شرکت حمل',
+    description: 'ناوگان، راننده، ظرفیت، مدارک و تخصیص سفرهای شرکت Y را مدیریت کنید.',
+    accessNote: 'برای ورود به این پنل، حساب فعال شرکت حمل لازم است.',
+    roles: ['carrier', 'company_y_owner', 'company_y_document_issuer']
+  },
+  driver: {
+    path: '/app/driver',
+    title: 'پنل راننده',
+    eyebrow: 'اپ عملیاتی راننده',
+    description: 'مأموریت، مسیر، مدارک، GPS، بارگیری و شواهد تحویل را در حساب شخصی خود دنبال کنید.',
+    accessNote: 'برای ورود به این پنل، حساب فعال راننده لازم است.',
+    roles: ['driver']
+  },
+  agent: {
+    path: '/app/agent',
+    title: 'پنل نماینده مقصد',
+    eyebrow: 'فضای اختصاصی نماینده مقصد',
+    description: 'تحویل، POD، قبض، مغایرت و شواهد مقصد را فقط برای سفرهای واگذارشده بررسی کنید.',
+    accessNote: 'دسترسی این پنل به عضویت Agent/Z یا Consignee و واگذاری معتبر سفر وابسته است.',
+    login: {
+      icon: 'agent',
+      visualRole: 'driver',
+      visualClass: 'agent',
+      heading: 'خوش آمدید، نماینده مقصد',
+      description: 'تحویل، POD و مغایرت‌های سفرهای واگذارشده را با دسترسی محدود مقصد بررسی کنید.',
+      cardTitle: 'ورود به فضای نماینده مقصد',
+      fieldLabel: 'ایمیل کاری یا شماره موبایل',
+      fieldPlaceholder: 'ایمیل کاری یا شماره موبایل را وارد کنید',
+      visualHeadline: 'تحویل معتبر، با شواهد قابل پیگیری.',
+      visualCaption: 'ورود امن به فضای کنترل مقصد'
+    },
+    roles: ['agent_z']
+  },
+  admin: {
+    path: '/admin/v2',
+    title: 'پنل مدیریت سامانه',
+    eyebrow: 'حاکمیت و امنیت سامانه',
+    description: 'KYC، ریسک، حسابرسی، امنیت و حاکمیت بازار در یک فضای جداگانه و محدود به نقش مدیریتی.',
+    accessNote: 'ورود این پنل فقط برای نقش مدیریتی مجاز و از مسیر احراز هویت سرور امکان‌پذیر است.',
+    roles: ['super_admin', 'marketplace_admin', 'conflict_officer', 'security_admin', 'compliance_officer', 'risk_manager', 'customer_support', 'finance_admin', 'government_observer', 'data_governance_officer', 'crm_admin', 'support_lead']
+  }
+};
+
+const PANEL_ENTRY_BY_PATH = Object.fromEntries(Object.values(PANEL_ENTRY_ROUTES).map((panel) => [panel.path, panel]));
+
+function readStorage(storage, key) {
+  try { return storage?.getItem(key) || ''; } catch (_error) { return ''; }
+}
+
+function writeStorage(storage, key, value) {
+  try { storage?.setItem(key, value); } catch (_error) { /* Storage may be unavailable in restricted browsers. */ }
+}
+
+function removeStorage(storage, key) {
+  try { storage?.removeItem(key); } catch (_error) { /* Storage may be unavailable in restricted browsers. */ }
+}
+
 function readSessionUser() {
-  try { return JSON.parse(sessionStorage.getItem('gomrok-session-user') || 'null'); } catch (_error) { return null; }
+  const raw = readStorage(sessionStorage, SESSION_USER_KEY) || readStorage(localStorage, SESSION_USER_KEY);
+  try { return JSON.parse(raw || 'null'); } catch (_error) { return null; }
+}
+
+function readStoredRefreshToken() {
+  return readStorage(localStorage, SESSION_REFRESH_TOKEN_KEY) || readStorage(sessionStorage, 'gomrok-refresh-token');
+}
+
+function readRememberedPhone(role) {
+  return readStorage(localStorage, LOGIN_PHONE_KEYS[role === 'carrier' ? 'carrier' : 'driver']);
+}
+
+function persistSession({ user, token, refreshToken, phone, role }) {
+  writeStorage(sessionStorage, SESSION_TOKEN_KEY, token || '');
+  writeStorage(sessionStorage, SESSION_USER_KEY, JSON.stringify(user || null));
+  removeStorage(sessionStorage, 'gomrok-refresh-token');
+  if (refreshToken) writeStorage(localStorage, SESSION_REFRESH_TOKEN_KEY, refreshToken);
+  else removeStorage(localStorage, SESSION_REFRESH_TOKEN_KEY);
+  writeStorage(localStorage, SESSION_USER_KEY, JSON.stringify(user || null));
+  const rememberedKey = role ? LOGIN_PHONE_KEYS[role] : '';
+  if (phone && rememberedKey) writeStorage(localStorage, rememberedKey, phone);
+}
+
+function clearSession() {
+  removeStorage(sessionStorage, SESSION_TOKEN_KEY);
+  removeStorage(sessionStorage, 'gomrok-refresh-token');
+  removeStorage(sessionStorage, SESSION_USER_KEY);
+  removeStorage(sessionStorage, 'gomrok-admin-step-up-token');
+  removeStorage(localStorage, SESSION_REFRESH_TOKEN_KEY);
+  removeStorage(localStorage, SESSION_USER_KEY);
 }
 
 async function apiRequest(path, options = {}) {
@@ -47,7 +214,13 @@ async function apiRequest(path, options = {}) {
     ...options
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.message || 'ارتباط با سرور برقرار نشد.');
+  if (!response.ok) {
+    const error = new Error(body.message || 'ارتباط با سرور برقرار نشد.');
+    error.status = response.status;
+    error.code = body.code;
+    error.roles = Array.isArray(body.roles) ? body.roles : [];
+    throw error;
+  }
   return body;
 }
 
@@ -70,7 +243,7 @@ function OnboardingImage({ role, className = '', decorative = false, loading = '
       alt={decorative ? '' : visual.alt}
       loading={loading}
       decoding="async"
-      fetchPriority={loading === 'eager' ? 'high' : 'auto'}
+      fetchpriority={loading === 'eager' ? 'high' : 'auto'}
     />
   );
 }
@@ -195,15 +368,17 @@ function WarehouseLineIcon() {
   return <OnboardingImage role="carrier" className="role-card__art" decorative />;
 }
 
-function AuthVisual({ role }) {
-  const isCarrier = role === 'carrier';
+function AuthVisual({ role, panel }) {
+  const login = panel?.login;
+  const visualRole = login?.visualRole || role;
+  const isCarrier = visualRole === 'carrier';
   return (
-    <aside className={`auth-visual auth-visual--${role}`}>
-      <OnboardingImage role={role} className="auth-visual__image" />
+    <aside className={`auth-visual auth-visual--${role}${login ? ` auth-visual--organization auth-visual--${login.visualClass}` : ''}`}>
+      <OnboardingImage role={visualRole} className="auth-visual__image" />
       <div className="auth-visual__content">
-        <span><Icon name="shield" size={16} /> GOMROK CONTROL NETWORK</span>
-        <strong>{isCarrier ? 'ناوگان و فرصت‌ها، در یک دید عملیاتی.' : 'هر سفر، یک مسیر روشن و امن.'}</strong>
-        <small>{isCarrier ? 'ورود به مرکز عملیات شرکت حمل' : 'ورود به اپ عملیاتی رانندگان'}</small>
+        <span><Icon name={login?.icon || 'shield'} size={16} /> GOMROK CONTROL NETWORK</span>
+        <strong>{login?.visualHeadline || (isCarrier ? 'ناوگان و فرصت‌ها، در یک دید عملیاتی.' : 'هر سفر، یک مسیر روشن و امن.')}</strong>
+        <small>{login?.visualCaption || (isCarrier ? 'ورود به مرکز عملیات شرکت حمل' : 'ورود به اپ عملیاتی رانندگان')}</small>
       </div>
     </aside>
   );
@@ -247,13 +422,141 @@ function RoleSelectionPage({ onDriverLogin, onCarrierLogin }) {
   );
 }
 
+function OrganizationLoginPage({ panel, panelKey, onBack, onLoggedIn }) {
+  const login = panel.login;
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState(null);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    setNotice(null);
+    try {
+      const result = await apiRequest('/api/auth/login-platform', {
+        method: 'POST',
+        body: JSON.stringify({
+          panel: panelKey,
+          identifier,
+          password,
+          ...(selectedRole ? { role: selectedRole } : {})
+        })
+      });
+      onLoggedIn(result.user, result.token, result.refreshToken, identifier.trim());
+    } catch (error) {
+      if (error.status === 409 && Array.isArray(error.roles) && error.roles.length) {
+        setAvailableRoles(error.roles);
+        setSelectedRole('');
+      }
+      setNotice({ tone: 'error', message: error.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="screen screen--auth screen--organization-login" dir="rtl">
+      <AuthHeader />
+      <div className="auth-layout">
+        <AuthVisual role={login.visualRole} panel={panel} />
+        <main className="auth-main auth-layout__form">
+          <span className="eyebrow"><Icon name={login.icon} size={16} /> {panel.eyebrow}</span>
+          <h1>{login.heading}</h1>
+          <p className="lead">{login.description}</p>
+
+          <form className="auth-card organization-login-card" onSubmit={submit}>
+            <div className="card-title"><span>{login.cardTitle}</span><b><Icon name="lock" size={17} /></b></div>
+            <Field
+              label={login.fieldLabel}
+              name="identifier"
+              value={identifier}
+              onChange={(event) => {
+                setIdentifier(event.target.value);
+                setAvailableRoles([]);
+                setSelectedRole('');
+                if (notice?.tone === 'error') setNotice(null);
+              }}
+              placeholder={login.fieldPlaceholder}
+              autoComplete="username"
+              required
+            />
+            <Field
+              label="رمز عبور"
+              name="password"
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                if (notice?.tone === 'error') setNotice(null);
+              }}
+              type="password"
+              placeholder="رمز عبور سازمانی را وارد کنید"
+              autoComplete="current-password"
+              required
+            />
+            {availableRoles.length > 0 && (
+              <label className="field organization-login-role">
+                <span className="field__label">نقش ورود</span>
+                <select name="role" value={selectedRole} onChange={(event) => setSelectedRole(event.target.value)} required>
+                  <option value="">نقش موردنظر را انتخاب کنید</option>
+                  {availableRoles.map((option) => <option value={option.role} key={option.role}>{option.label}</option>)}
+                </select>
+              </label>
+            )}
+            <div className="organization-login-status">
+              <Icon name="shield" size={19} />
+              <span><strong>دسترسی سازمانی و محدود به نقش</strong><small>{panel.accessNote}</small></span>
+            </div>
+            {notice && <p className={`notice notice--${notice.tone}`}>{notice.message}</p>}
+            <button className="primary-button" type="submit" disabled={busy}>{busy ? 'در حال بررسی نشست…' : 'ورود به پنل'}</button>
+            <button className="text-button" type="button" onClick={onBack}>بازگشت به انتخاب پنل</button>
+          </form>
+
+          <p className="organization-login-note"><Icon name="lock" size={15} /> هیچ محموله، نرخ یا سندی پیش از تأیید نشست سازمانی از سرور بارگذاری نمی‌شود.</p>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function RolePanelAccessDenied({ panel, currentRole, onLogout, onBack }) {
+  return (
+    <div className="screen screen--panel-entry" dir="rtl">
+      <AuthHeader />
+      <main className="panel-entry-main">
+        <section className="panel-entry-card panel-entry-card--denied" aria-labelledby="panel-access-denied-title">
+          <span className="eyebrow"><Icon name="shield" size={16} /> دسترسی نقش‌محور</span>
+          <h1 id="panel-access-denied-title">این نشست برای این پنل مجاز نیست</h1>
+          <p className="lead">نشست فعلی نقش «{currentRole || 'نامشخص'}» دارد و نمی‌تواند به {panel.title} دسترسی پیدا کند.</p>
+          <div className="panel-entry-status panel-entry-status--denied">
+            <strong>داده‌ی پنل دیگری نمایش داده نمی‌شود</strong>
+            <span>برای جلوگیری از جابه‌جایی ناخواسته بین نقش‌ها، ابتدا از نشست فعلی خارج شوید و با حساب مجاز وارد شوید.</span>
+          </div>
+          <div className="panel-entry-actions">
+            <button className="primary-button" type="button" onClick={onLogout}>خروج از نشست</button>
+            <button className="text-button" type="button" onClick={onBack}>بازگشت به انتخاب پنل</button>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
 function LoginPage({ initialRole = 'driver', onDriverRegister, onCarrierRegister, onLoggedIn }) {
   const role = initialRole === 'carrier' ? 'carrier' : 'driver';
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(() => readRememberedPhone(role));
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const isCarrier = role === 'carrier';
+
+  useEffect(() => {
+    setPhone(readRememberedPhone(role));
+    setPassword('');
+    setNotice('');
+  }, [role]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -264,7 +567,8 @@ function LoginPage({ initialRole = 'driver', onDriverRegister, onCarrierRegister
         method: 'POST',
         body: JSON.stringify({ phone, password })
       });
-      onLoggedIn(result.user, result.token, result.refreshToken);
+      writeStorage(localStorage, LOGIN_PHONE_KEYS[role], phone.trim());
+      onLoggedIn(result.user, result.token, result.refreshToken, phone.trim(), role);
     } catch (error) {
       setNotice(error.message);
     } finally {
@@ -284,7 +588,7 @@ function LoginPage({ initialRole = 'driver', onDriverRegister, onCarrierRegister
 
         <form className="auth-card" onSubmit={submit}>
           <div className="card-title"><span>ورود به حساب {isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}</span><b><Icon name="lock" size={17} /></b></div>
-          <Field label="شماره موبایل" name="phone" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="۰۹۱۲۱۲۳۴۵۶۷" inputMode="tel" autoComplete="tel" />
+          <Field label="شماره موبایل" name="phone" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="۰۹۱۲۱۲۳۴۵۶۷" inputMode="tel" autoComplete="username" />
           <Field label="رمز عبور" name="password" value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="رمز عبور خود را وارد کن" autoComplete="current-password" />
           {notice && <p className="notice notice--error">{notice}</p>}
           <button className="primary-button" type="submit" disabled={busy}>{busy ? 'در حال ورود…' : `ورود به پنل ${isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}`}</button>
@@ -302,6 +606,7 @@ function RegisterPage({ onRegistered }) {
   const [form, setForm] = useState(emptyRegistration);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [activeStep, setActiveStep] = useState(0);
 
   const update = (event) => {
     const { name, value } = event.target;
@@ -327,9 +632,9 @@ function RegisterPage({ onRegistered }) {
 
   return (
     <div className="screen screen--register screen--driver-register">
-      <RegisterHeader role="driver" />
+      <RegisterHeader role="driver" activeStep={activeStep} onStepChange={setActiveStep} />
       <main className="register-main">
-        <RegistrationVisual role="driver" />
+        <RegistrationVisual role="driver" activeStep={activeStep} />
         <section className="register-main__form-column">
         <form className="auth-card auth-card--register register-form" onSubmit={submit}>
           <div className="register-form__intro"><strong>اطلاعات راننده</strong><small>اطلاعات شما پس از بررسی ادمین به حساب کاربری تبدیل می‌شود.</small></div>
@@ -351,7 +656,7 @@ function RegisterPage({ onRegistered }) {
   );
 }
 
-function RegisterHeader({ role }) {
+function RegisterHeader({ role, activeStep = 0, onStepChange }) {
   const isCarrier = role === 'carrier';
   const steps = ['اطلاعات پایه', 'آپلود مدارک', 'بررسی اطلاعات', 'ایجاد حساب'];
 
@@ -360,30 +665,48 @@ function RegisterHeader({ role }) {
       <div className="register-header__title"><strong>ثبت‌نام {isCarrier ? 'شرکت حمل‌ونقل' : 'راننده'}</strong><small>gomrok.org</small></div>
       <div className="register-steps" aria-label="مراحل ثبت‌نام">
         {steps.map((step, index) => (
-          <span className={`register-step${index === 0 ? ' register-step--active' : ''}`} key={step}>
-            <b>{index === 0 ? <Icon name="check" size={15} /> : index + 1}</b><small>{step}</small>
-          </span>
+          <button
+            className={`register-step${index === activeStep ? ' register-step--active' : ''}`}
+            key={step}
+            type="button"
+            aria-current={index === activeStep ? 'step' : undefined}
+            aria-label={`پیش‌نمایش مرحله ${step}`}
+            onClick={() => onStepChange?.(index)}
+          >
+            <b>{index === activeStep ? <Icon name="check" size={15} /> : index + 1}</b><small>{step}</small>
+          </button>
         )).reduce((items, step, index, stepsList) => (index < stepsList.length - 1 ? [...items, step, <i key={`line-${index}`} />] : [...items, step]), [])}
       </div>
     </header>
   );
 }
 
-function RegistrationVisual({ role }) {
+function RegistrationVisual({ role, activeStep = 0 }) {
   const isCarrier = role === 'carrier';
+  const visual = registrationStepVisuals[activeStep] || registrationStepVisuals[0];
   const benefits = isCarrier
     ? ['احراز هویت سازمانی', 'فعال‌سازی فرصت‌های RFQ', 'کنترل امن ناوگان']
     : ['احراز هویت راننده', 'دسترسی امن به مأموریت‌ها', 'ثبت مدارک و تحویل'];
 
   return (
     <aside className={`register-visual register-visual--${role}`}>
-      <OnboardingImage role={role} className="register-visual__image" />
-      <div className="register-visual__content">
+      <div className="register-visual__copy">
         <span className="register-visual__eyebrow"><Icon name={isCarrier ? 'building' : 'identity'} size={17} /> ثبت‌نام تأییدمحور</span>
         <h2>{isCarrier ? 'شرکت حمل خود را به شبکه عملیاتی متصل کنید.' : 'مسیر حرفه‌ای خود را از یک حساب امن آغاز کنید.'}</h2>
         <p>{isCarrier ? 'اطلاعات سازمان، مدیر و محدوده فعالیت برای فعال‌سازی پنل بررسی می‌شود.' : 'اطلاعات پایه شما برای احراز هویت و تخصیص مأموریت‌های معتبر بررسی می‌شود.'}</p>
-        <ul>{benefits.map((benefit) => <li key={benefit}><Icon name="check" size={15} /> {benefit}</li>)}</ul>
       </div>
+      <div className="registration-step-gallery" aria-label={`تصویر مرحله ${visual.title}`}>
+        <figure className="registration-step-card registration-step-card--active" key={visual.title}>
+          <img src={visual.src} width="1664" height="940" alt={visual.alt} loading="eager" decoding="async" />
+          <span className="registration-step-card__shade" />
+          <figcaption>
+            <span className="registration-step-card__icon"><Icon name={visual.icon} size={15} /></span>
+            <span><strong>{visual.title}</strong><small>{visual.caption}</small></span>
+            <b>{String(activeStep + 1).padStart(2, '0')}</b>
+          </figcaption>
+        </figure>
+      </div>
+      <ul className="register-visual__benefits">{benefits.map((benefit) => <li key={benefit}><Icon name="check" size={15} /> {benefit}</li>)}</ul>
     </aside>
   );
 }
@@ -392,6 +715,7 @@ function CarrierRegisterPage({ onRegistered }) {
   const [form, setForm] = useState(emptyCarrierRegistration);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [activeStep, setActiveStep] = useState(0);
 
   const update = (event) => {
     const { name, value } = event.target;
@@ -417,9 +741,9 @@ function CarrierRegisterPage({ onRegistered }) {
 
   return (
     <div className="screen screen--register screen--carrier-register">
-      <RegisterHeader role="carrier" />
+      <RegisterHeader role="carrier" activeStep={activeStep} onStepChange={setActiveStep} />
       <main className="register-main">
-        <RegistrationVisual role="carrier" />
+        <RegistrationVisual role="carrier" activeStep={activeStep} />
         <section className="register-main__form-column">
         <form className="auth-card auth-card--register auth-card--carrier register-form" onSubmit={submit}>
           <div className="register-form__intro"><strong>اطلاعات شرکت حمل‌ونقل</strong><small>اطلاعات شرکت پس از بررسی ادمین به حساب تبدیل می‌شود.</small></div>
@@ -797,11 +1121,14 @@ const DESIGN_PREVIEW_PANELS = [
 ];
 
 const DESIGN_PREVIEW_PUBLIC_SURFACES = [
+  { href: '/app/quote', title: 'استعلام قیمت حمل', description: 'فرم مشترک مهمان و عضو با دو مسیر پاسخ', icon: 'route' },
   { href: '/app', title: 'ورود اپ راننده', description: 'ورود یا ثبت‌نام از پایین صفحه', icon: 'driver' },
   { href: '/driver-login', title: 'ورود راننده', description: 'ورود به اپ عملیاتی', icon: 'driver' },
   { href: '/carrier-login', title: 'ورود شرکت حمل', description: 'ورود به پنل شرکت حمل‌ونقل', icon: 'fleet' },
-  { href: '/app/driver', title: 'ثبت‌نام راننده', description: 'فرآیند درخواست عضویت', icon: 'user' },
-  { href: '/app/careers', title: 'ثبت‌نام شرکت حمل', description: 'درخواست عضویت سازمانی', icon: 'organization' },
+  { href: '/app/driver', title: 'ورود اپ راننده', description: 'ورود به اپ عملیاتی راننده', icon: 'driver' },
+  { href: '/app/careers', title: 'ورود شرکت حمل', description: 'ورود به پنل شرکت حمل‌ونقل', icon: 'fleet' },
+  { href: '/app/driver/register', title: 'ثبت‌نام راننده', description: 'فرآیند درخواست عضویت', icon: 'user' },
+  { href: '/app/careers/register', title: 'ثبت‌نام شرکت حمل', description: 'درخواست عضویت سازمانی', icon: 'organization' },
   { href: '/admin/v2', title: 'ورود مدیریت', description: 'درگاه امن راهبری', icon: 'shield' }
 ];
 
@@ -870,33 +1197,136 @@ export default function App() {
   const normalizedInitialPath = initialPath.replace(/\/+$/, '') || '/';
   const isDesignPreviewHub = import.meta.env.DEV && normalizedInitialPath === '/app/preview';
   const designPreviewRole = readDesignPreviewRole(initialPath);
-  const isCarrierRegisterPath = ['/app/careers', '/app/careers/', '/carrier-register'].includes(initialPath);
-  const isDriverRegisterPath = ['/app/driver', '/app/driver/', '/driver-register'].includes(initialPath);
-  const isAdminPath = ['/admin/v2', '/admin/v2/', '/app/admin/v2', '/app/admin/v2/'].includes(initialPath);
+  const panelEntryRoute = PANEL_ENTRY_BY_PATH[normalizedInitialPath];
+  const panelEntryKey = Object.entries(PANEL_ENTRY_ROUTES).find(([, panel]) => panel.path === normalizedInitialPath)?.[0] || '';
+  const isCarrierRegisterPath = ['/app/careers/register', '/carrier-register'].includes(normalizedInitialPath);
+  const isDriverRegisterPath = ['/app/driver/register', '/driver-register'].includes(normalizedInitialPath);
+  const isAdminPath = ['/admin/v2', '/app/admin/v2'].includes(normalizedInitialPath);
+  const isCargoInquiryPath = ['/app/quote', '/app/inquiry'].includes(normalizedInitialPath);
   const isRoleSelectionPath = ['/app/select-role', '/select-role'].includes(normalizedInitialPath);
-  const initialPage = isAdminPath ? 'admin' : isCarrierRegisterPath ? 'carrier-register' : isDriverRegisterPath ? 'driver-register' : isRoleSelectionPath ? 'role-select' : normalizedInitialPath === '/app' || ['/carrier-login', '/driver-login'].includes(initialPath) ? 'login' : 'role-select';
-  const initialRole = initialPath.startsWith('/carrier') || initialPath === '/app/careers' ? 'carrier' : 'driver';
+  const isLoginPath = ['/app', '/app/driver', '/app/careers', '/driver-login', '/carrier-login'].includes(normalizedInitialPath);
+  const isProtectedPanelEntry = panelEntryRoute && !['driver', 'carrier', 'admin'].includes(panelEntryKey);
+  const initialPage = isAdminPath ? 'admin' : isCarrierRegisterPath ? 'carrier-register' : isDriverRegisterPath ? 'driver-register' : isRoleSelectionPath ? 'role-select' : isProtectedPanelEntry ? 'panel-entry' : isLoginPath ? 'login' : 'role-select';
+  const initialRole = normalizedInitialPath.startsWith('/carrier') || normalizedInitialPath.startsWith('/app/careers') ? 'carrier' : 'driver';
   const [page, setPage] = useState(initialPage);
   const [loginRole, setLoginRole] = useState(initialRole);
   const [user, setUser] = useState(readSessionUser);
-  const [token, setToken] = useState(() => sessionStorage.getItem('gomrok-session-token') || '');
+  const [token, setToken] = useState(() => readStorage(sessionStorage, SESSION_TOKEN_KEY));
+  const [refreshToken, setRefreshToken] = useState(readStoredRefreshToken);
+  const [authReady, setAuthReady] = useState(() => !readStoredRefreshToken());
   const [registration, setRegistration] = useState(null);
-
-  if (isDesignPreviewHub) return <DesignPreviewHub />;
-
-  if (designPreviewRole) {
-    return <PlatformWorkspace user={DESIGN_PREVIEW_USERS[designPreviewRole]} token="local-design-preview" apiUrl="" onLogout={() => { window.history.pushState({}, '', '/app'); window.location.reload(); }} />;
-  }
+  const refreshTokenRef = useRef(refreshToken);
 
   const navigateAuth = (nextPage, nextRole) => {
-    const path = nextPage === 'carrier-register' ? '/app/careers' : nextPage === 'driver-register' ? '/app/driver' : nextPage === 'role-select' ? '/app/select-role' : nextRole === 'carrier' ? '/carrier-login' : '/driver-login';
+    const path = nextPage === 'carrier-register' ? '/app/careers/register' : nextPage === 'driver-register' ? '/app/driver/register' : nextPage === 'role-select' ? '/app/select-role' : nextRole === 'carrier' ? '/carrier-login' : '/driver-login';
     window.history.pushState({}, '', path);
     if (nextRole) setLoginRole(nextRole);
     setPage(nextPage);
   };
 
+  const navigatePanelEntry = (nextPanelKey) => {
+    const nextPanel = PANEL_ENTRY_ROUTES[nextPanelKey];
+    if (!nextPanel) {
+      navigateAuth('role-select');
+      return;
+    }
+    window.history.pushState({}, '', nextPanel.path);
+    setPage('panel-entry');
+  };
+
+  const handleLoggedIn = (nextUser, nextToken, nextRefreshToken, identifier, role) => {
+    persistSession({ user: nextUser, token: nextToken, refreshToken: nextRefreshToken, phone: identifier, role: role || nextUser?.role });
+    refreshTokenRef.current = nextRefreshToken || '';
+    setRefreshToken(nextRefreshToken || '');
+    setToken(nextToken);
+    setUser(nextUser);
+    setAuthReady(true);
+  };
+
+  const handleLogout = () => {
+    const currentPanelKey = panelEntryKey && PANEL_ENTRY_ROUTES[panelEntryKey] ? panelEntryKey : '';
+    const role = user?.role === 'carrier' ? 'carrier' : 'driver';
+    clearSession();
+    refreshTokenRef.current = '';
+    setRefreshToken('');
+    setToken('');
+    setUser(null);
+    setAuthReady(true);
+    if (currentPanelKey && !['driver', 'carrier', 'admin'].includes(currentPanelKey)) navigatePanelEntry(currentPanelKey);
+    else navigateAuth('login', role);
+  };
+
+  useEffect(() => {
+    refreshTokenRef.current = refreshToken;
+  }, [refreshToken]);
+
+  const hasRefreshToken = Boolean(refreshToken);
+  useEffect(() => {
+    if (!hasRefreshToken) {
+      setAuthReady(true);
+      return undefined;
+    }
+
+    let active = true;
+    const refreshSession = async () => {
+      const currentRefreshToken = refreshTokenRef.current;
+      if (!currentRefreshToken) return;
+      try {
+        const result = await apiRequest('/api/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken: currentRefreshToken }) });
+        if (!active) return;
+        const storedUser = readSessionUser();
+        if (!storedUser || !result.token) throw new Error('نشست ذخیره‌شده کامل نیست.');
+        const nextRefreshToken = result.refreshToken || currentRefreshToken;
+        persistSession({ user: storedUser, token: result.token, refreshToken: nextRefreshToken });
+        refreshTokenRef.current = nextRefreshToken;
+        setRefreshToken(nextRefreshToken);
+        setToken(result.token);
+        setUser(storedUser);
+      } catch (error) {
+        if (!active) return;
+        if (error.status === 401 || error.code === 'AUTH-401' || error.message === 'نشست ذخیره‌شده کامل نیست.') {
+          clearSession();
+          refreshTokenRef.current = '';
+          setRefreshToken('');
+          setToken('');
+          setUser(null);
+          setLoginRole(initialRole);
+          setPage(isProtectedPanelEntry ? 'panel-entry' : 'login');
+        }
+      } finally {
+        if (active) setAuthReady(true);
+      }
+    };
+
+    let refreshTimer;
+    const refreshKickoff = window.setTimeout(() => {
+      refreshSession();
+      refreshTimer = window.setInterval(refreshSession, 10 * 60 * 1000);
+    }, 0);
+    return () => {
+      active = false;
+      window.clearTimeout(refreshKickoff);
+      if (refreshTimer) window.clearInterval(refreshTimer);
+    };
+  }, [hasRefreshToken, initialRole]);
+
+  if (isDesignPreviewHub) return <DesignPreviewHub />;
+
+  if (isCargoInquiryPath) return <CargoInquiryPage apiUrl={API_URL} />;
+
+  if (designPreviewRole) {
+    return <PlatformWorkspace user={DESIGN_PREVIEW_USERS[designPreviewRole]} token="local-design-preview" apiUrl="" onLogout={() => { window.history.pushState({}, '', '/app'); window.location.reload(); }} />;
+  }
+
   if (registration) return <RegistrationSubmittedPage registration={registration} onContinue={() => { setRegistration(null); navigateAuth('login', registration.role === 'carrier' ? 'carrier' : 'driver'); }} />;
-  if (user && token) return <PlatformWorkspace user={user} token={token} apiUrl={API_URL} onLogout={() => { sessionStorage.removeItem('gomrok-session-token'); sessionStorage.removeItem('gomrok-refresh-token'); sessionStorage.removeItem('gomrok-session-user'); sessionStorage.removeItem('gomrok-admin-step-up-token'); setToken(''); setUser(null); navigateAuth('login', user.role === 'carrier' ? 'carrier' : 'driver'); }} />;
+  if (!authReady) return <div className="platform-loading" dir="rtl">در حال بررسی نشست امن…</div>;
+  if (user && token) {
+    if (panelEntryRoute && !panelEntryRoute.roles.includes(user.role)) {
+      return <RolePanelAccessDenied panel={panelEntryRoute} currentRole={user.role} onLogout={handleLogout} onBack={() => navigateAuth('role-select')} />;
+    }
+    return <PlatformWorkspace user={user} token={token} apiUrl={API_URL} onLogout={handleLogout} />;
+  }
+  if (page === 'panel-entry' && panelEntryRoute) return <OrganizationLoginPage panel={panelEntryRoute} panelKey={panelEntryKey} onBack={() => navigateAuth('role-select')} onLoggedIn={handleLoggedIn} />;
   if (page === 'admin') return <AdminPage />;
   if (page === 'role-select') return <RoleSelectionPage onDriverLogin={() => navigateAuth('login', 'driver')} onCarrierLogin={() => navigateAuth('login', 'carrier')} />;
   if (page === 'driver-register') return <RegisterPage onRegistered={setRegistration} />;
@@ -906,7 +1336,7 @@ export default function App() {
       initialRole={loginRole}
       onDriverRegister={() => navigateAuth('driver-register', 'driver')}
       onCarrierRegister={() => navigateAuth('carrier-register', 'carrier')}
-      onLoggedIn={(nextUser, nextToken, nextRefreshToken) => { sessionStorage.setItem('gomrok-session-token', nextToken); sessionStorage.setItem('gomrok-session-user', JSON.stringify(nextUser)); if (nextRefreshToken) sessionStorage.setItem('gomrok-refresh-token', nextRefreshToken); setToken(nextToken); setUser(nextUser); }}
+      onLoggedIn={handleLoggedIn}
     />
   );
 }

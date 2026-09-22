@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 import { pool } from '../db.js';
-import { platformAuth, idempotencyKey } from '../security/platform-auth.js';
-import { JWT_SECRET, STEP_UP_SECRET } from '../config.js';
+import { platformAuth, resolveIdempotencyKey } from '../security/platform-auth.js';
+import { JWT_SECRET, OPERATING_CONTEXT_SESSIONS_ENABLED, STEP_UP_SECRET } from '../config.js';
 import { publishPlatformEvent } from '../realtime/broker.js';
 import {
   ADMIN_ROLES,
@@ -14,8 +15,12 @@ import {
   normalizeRole
 } from '../../../shared/contract.js';
 import { DomainError, parseJson } from '../domain/workflow.js';
+import { createOperatingContextSessionService } from '../services/operating-context-session.service.js';
+import { readLegacyRegistrationReadModel } from '../services/legacy-registration-read-model.service.js';
+import { isValidPlatformLoginIdentifier, normalizePlatformLoginIdentifier } from '../services/platform-login.service.js';
 
 const router = Router();
+const operatingContextSessionService = createOperatingContextSessionService(pool);
 const jwtSecret = JWT_SECRET;
 const stepUpSecret = STEP_UP_SECRET;
 const PURPOSE_ROLES = [ROLES.SUPER_ADMIN, ROLES.MARKETPLACE_ADMIN];
@@ -33,6 +38,19 @@ const RULEPACK_TRANSITIONS = Object.freeze({
   SUPERSEDED: ['ARCHIVED'],
   ARCHIVED: []
 });
+
+async function revokeUserSessions(tenantId, userId) {
+  if (OPERATING_CONTEXT_SESSIONS_ENABLED) {
+    return operatingContextSessionService.revokeUserSessions({ tenantId, userId });
+  }
+  const [result] = await pool.execute(
+    `UPDATE platform_refresh_tokens
+        SET revoked_at = NOW()
+      WHERE tenant_id = ? AND user_id = ? AND revoked_at IS NULL`,
+    [tenantId, userId]
+  );
+  return { revokedRefreshTokens: Number(result.affectedRows || 0), revokedSessions: 0 };
+}
 const ROLE_CASE_TYPES = Object.freeze({
   [ROLES.SUPER_ADMIN]: CASE_TYPES,
   [ROLES.MARKETPLACE_ADMIN]: CASE_TYPES,
@@ -57,14 +75,16 @@ function jsonResponse(body, status = 200) {
 }
 
 function problem(response, error, request) {
-  const status = Number(error.status || error.statusCode || 500);
+  const isSafeError = error instanceof DomainError || error?.expose === true;
+  const status = isSafeError ? Number(error.status || error.statusCode || 500) : 500;
+  const code = isSafeError ? (error.code || 'ADM-500') : 'ADM-500';
   return response.status(status).type('application/problem+json').json({
-    type: `https://gomrok.org/problems/${error.code || 'ADM-500'}`,
-    title: error.code || 'ADM-500',
+    type: `https://gomrok.org/problems/${code}`,
+    title: code,
     status,
-    detail: error.message || 'عملیات مدیریتی انجام نشد.',
-    code: error.code || 'ADM-500',
-    details: error.details || undefined,
+    detail: isSafeError ? (error.message || 'عملیات مدیریتی انجام نشد.') : 'عملیات مدیریتی انجام نشد.',
+    code,
+    details: isSafeError ? (error.details || undefined) : undefined,
     correlationId: request.correlationId
   });
 }
@@ -245,8 +265,13 @@ async function domainEvent(request, { eventName, entityType, entityId = null, pa
 }
 
 async function runWrite(request, response, handler, { requireKey = true } = {}) {
-  const key = idempotencyKey(request);
-  if (requireKey && !key) return problem(response, new DomainError(ERROR_CODES.STEP_UP_REQUIRED, 'برای این عملیات حساس X-Idempotency-Key لازم است.', 428), request);
+  let key;
+  try {
+    key = resolveIdempotencyKey(request);
+  } catch (error) {
+    return problem(response, error, request);
+  }
+  if (requireKey && !key) return problem(response, new DomainError(ERROR_CODES.STEP_UP_REQUIRED, 'برای این عملیات حساس Idempotency-Key یا X-Idempotency-Key لازم است.', 428), request);
   if (key && request.actor.userId) {
     const [previousRows] = await pool.execute(
       `SELECT status_code, response_json FROM platform_idempotency_keys
@@ -343,7 +368,7 @@ router.get('/dashboard', platformAuth({ roles: ALL_GOVERNANCE_ROLES, permission:
   try {
     requirePurpose(request);
     const tenantId = request.actor.tenantId;
-    const [orgRows, membershipRows, casesRows, breakGlassRows, exportRows, rulePackRows, rfqRows, auditRows] = await Promise.all([
+    const [orgRows, membershipRows, casesRows, breakGlassRows, exportRows, rulePackRows, rfqRows, auditRows, legacy] = await Promise.all([
       pool.execute(`SELECT organization_type, status, qualification_state, COUNT(*) AS total FROM platform_organizations WHERE tenant_id = ? GROUP BY organization_type, status, qualification_state`, [tenantId]),
       pool.execute(`SELECT role, status, qualification_state, COUNT(*) AS total FROM organization_memberships WHERE tenant_id = ? GROUP BY role, status, qualification_state`, [tenantId]),
       pool.execute(`SELECT case_type, state, severity, COUNT(*) AS total FROM admin_governance_cases WHERE tenant_id = ? GROUP BY case_type, state, severity`, [tenantId]),
@@ -351,7 +376,8 @@ router.get('/dashboard', platformAuth({ roles: ALL_GOVERNANCE_ROLES, permission:
       pool.execute(`SELECT state, COUNT(*) AS total FROM platform_export_requests WHERE tenant_id = ? GROUP BY state`, [tenantId]),
       pool.execute(`SELECT state, COUNT(*) AS total FROM admin_rulepacks WHERE tenant_id = ? GROUP BY state`, [tenantId]),
       pool.execute(`SELECT level, state, COUNT(*) AS total, MAX(deadline_at) AS latest_deadline FROM rfq_books WHERE tenant_id = ? GROUP BY level, state`, [tenantId]),
-      pool.execute(`SELECT COUNT(*) AS total FROM audit_events WHERE tenant_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`, [tenantId])
+      pool.execute(`SELECT COUNT(*) AS total FROM audit_events WHERE tenant_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`, [tenantId]),
+      readLegacyRegistrationReadModel(pool, tenantId, 8)
     ]);
     const openCases = casesRows[0].filter((row) => ['OPEN', 'IN_REVIEW', 'ESCALATED', 'RESTRICTED'].includes(row.state)).reduce((sum, row) => sum + Number(row.total), 0);
     return response.json({
@@ -363,7 +389,11 @@ router.get('/dashboard', platformAuth({ roles: ALL_GOVERNANCE_ROLES, permission:
         pendingBreakGlass: Number(breakGlassRows[0].find((row) => row.state === 'REQUESTED')?.total || 0),
         pendingExports: Number(exportRows[0].find((row) => row.state === 'REQUESTED')?.total || 0),
         activeRulePacks: Number(rulePackRows[0].find((row) => row.state === 'ACTIVE')?.total || 0),
-        auditEvents24h: Number(auditRows[0][0]?.total || 0)
+        auditEvents24h: Number(auditRows[0][0]?.total || 0),
+        legacyDrivers: legacy.accounts.drivers.total,
+        legacyCarriers: legacy.accounts.carriers.total,
+        pendingLegacyDrivers: legacy.requests.drivers.pending,
+        pendingLegacyCarriers: legacy.requests.carriers.pending
       },
       organizations: orgRows[0],
       memberships: membershipRows[0],
@@ -371,8 +401,20 @@ router.get('/dashboard', platformAuth({ roles: ALL_GOVERNANCE_ROLES, permission:
       breakGlass: breakGlassRows[0],
       exports: exportRows[0],
       rulePacks: rulePackRows[0],
-      rfqs: rfqRows[0]
+      rfqs: rfqRows[0],
+      legacy
     });
+  } catch (error) {
+    return problem(response, error, request);
+  }
+});
+
+router.get('/legacy-registrations', platformAuth({ roles: [ROLES.SUPER_ADMIN], permission: PERMISSIONS.READ }), async (request, response) => {
+  try {
+    requirePurpose(request);
+    const limit = parseLimit(request.query.limit, 100, 200);
+    const legacy = await readLegacyRegistrationReadModel(pool, request.actor.tenantId, limit);
+    return response.json({ actor: { role: actorRole(request), tenantId: request.actor.tenantId }, legacy });
   } catch (error) {
     return problem(response, error, request);
   }
@@ -419,6 +461,74 @@ router.get('/users', platformAuth({ roles: ALL_GOVERNANCE_ROLES, permission: PER
   }
 });
 
+router.put('/users/:userId/credentials', platformAuth({ roles: [ROLES.SUPER_ADMIN, ROLES.SECURITY_ADMIN], permission: PERMISSIONS.UPDATE }), async (request, response) => {
+  return runWrite(request, response, async () => {
+    requirePurpose(request);
+    requireTraceableActor(request);
+    requireStepUp(request);
+    const userId = parseId(request.params.userId, 'شناسه کاربر');
+    const loginIdentifier = normalizePlatformLoginIdentifier(request.body?.loginIdentifier);
+    const password = String(request.body?.password || '');
+    if (!isValidPlatformLoginIdentifier(loginIdentifier)) {
+      throw new DomainError('AUTH-422', 'ایمیل کاری یا شماره موبایل معتبر نیست.', 422);
+    }
+    if (password.length < 12 || password.length > 256) {
+      throw new DomainError('AUTH-422', 'رمز عبور باید بین ۱۲ تا ۲۵۶ نویسه باشد.', 422);
+    }
+
+    const [memberships] = await pool.execute(
+      `SELECT u.id, u.display_name, m.organization_id, m.role
+         FROM platform_users u
+         JOIN organization_memberships m ON m.user_id = u.id AND m.tenant_id = u.tenant_id
+         JOIN platform_organizations o ON o.id = m.organization_id AND o.tenant_id = m.tenant_id
+        WHERE u.id = ? AND u.tenant_id = ? AND u.status = 'active'
+          AND m.status = 'active' AND o.status = 'active'`,
+      [userId, request.actor.tenantId]
+    );
+    if (!memberships.length) throw new DomainError('IAM-404', 'کاربر فعال و دارای عضویت پیدا نشد.', 404);
+    if (memberships.some((item) => String(item.organization_id) === String(request.actor.organizationId))) {
+      throw new DomainError(ERROR_CODES.ADMIN_PERMISSION, 'تغییر اعتبار ورود سازمان خودکاربر مجاز نیست.', 403);
+    }
+    if (memberships.some((item) => ADMIN_ROLES.includes(normalizeRole(item.role)))) {
+      throw new DomainError(ERROR_CODES.ADMIN_PERMISSION, 'اعتبار ورود نقش‌های ستادی باید از IAM سازمانی مدیریت شود.', 403);
+    }
+
+    const [conflicts] = await pool.execute(
+      `SELECT user_id FROM platform_user_credentials
+        WHERE tenant_id = ? AND login_identifier_normalized = ? AND user_id <> ?
+        LIMIT 1`,
+      [request.actor.tenantId, loginIdentifier, userId]
+    );
+    if (conflicts[0]) throw new DomainError('AUTH-409', 'این شناسه ورود قبلاً برای کاربر دیگری ثبت شده است.', 409);
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    await pool.execute(
+      `INSERT INTO platform_user_credentials
+        (tenant_id, user_id, login_identifier, login_identifier_normalized, password_hash, status, failed_attempts, locked_until, last_login_at)
+       VALUES (?, ?, ?, ?, ?, 'active', 0, NULL, NULL)
+       ON DUPLICATE KEY UPDATE
+         login_identifier = VALUES(login_identifier),
+         login_identifier_normalized = VALUES(login_identifier_normalized),
+         password_hash = VALUES(password_hash),
+         status = 'active', failed_attempts = 0, locked_until = NULL, last_login_at = NULL`,
+      [request.actor.tenantId, userId, String(request.body?.loginIdentifier || '').trim(), loginIdentifier, passwordHash]
+    );
+    const revocation = await revokeUserSessions(request.actor.tenantId, userId);
+    await domainEvent(request, {
+      eventName: 'PlatformCredentialProvisioned',
+      entityType: 'platform_user_credential',
+      entityId: userId,
+      payload: { userId, loginIdentifier, revokedCount: revocation.revokedRefreshTokens }
+    });
+    return jsonResponse({
+      message: 'اعتبار ورود سازمانی ثبت شد؛ رمز فقط از کانال امن به کاربر تحویل شود.',
+      userId,
+      loginIdentifier,
+      revokedCount: revocation.revokedRefreshTokens
+    });
+  });
+});
+
 router.post('/users/:userId/sessions/revoke', platformAuth({ roles: [ROLES.SUPER_ADMIN, ROLES.SECURITY_ADMIN], permission: PERMISSIONS.UPDATE }), async (request, response) => {
   return runWrite(request, response, async () => {
     requireTraceableActor(request);
@@ -426,9 +536,20 @@ router.post('/users/:userId/sessions/revoke', platformAuth({ roles: [ROLES.SUPER
     const userId = parseId(request.params.userId, 'شناسه کاربر');
     const [users] = await pool.execute(`SELECT id FROM platform_users WHERE id = ? AND tenant_id = ? LIMIT 1`, [userId, request.actor.tenantId]);
     if (!users[0]) throw new DomainError('IAM-404', 'کاربر در Tenant جاری پیدا نشد.', 404);
-    const [result] = await pool.execute(`UPDATE platform_refresh_tokens SET revoked_at = NOW() WHERE tenant_id = ? AND user_id = ? AND revoked_at IS NULL`, [request.actor.tenantId, userId]);
-    await domainEvent(request, { eventName: 'SecurityIncidentOpened', entityType: 'platform_user_session', entityId: userId, payload: { action: 'SESSION_REVOKE', revokedCount: result.affectedRows } });
-    return jsonResponse({ message: 'نشست‌های فعال کاربر لغو شد و رویداد امنیتی ثبت شد.', userId, revokedCount: result.affectedRows });
+    const revocation = await revokeUserSessions(request.actor.tenantId, userId);
+    const revokedCount = revocation.revokedRefreshTokens;
+    await domainEvent(request, {
+      eventName: 'SecurityIncidentOpened',
+      entityType: 'platform_user_session',
+      entityId: userId,
+      payload: { action: 'SESSION_REVOKE', revokedCount, revokedContextSessions: revocation.revokedSessions }
+    });
+    return jsonResponse({
+      message: 'نشست‌های فعال کاربر لغو شد و رویداد امنیتی ثبت شد.',
+      userId,
+      revokedCount,
+      revokedContextSessions: revocation.revokedSessions
+    });
   });
 });
 
@@ -444,7 +565,9 @@ router.patch('/memberships/:membershipId/status', platformAuth({ roles: [ROLES.S
     if (!item) throw new DomainError('IAM-404', 'عضویت پیدا نشد.', 404);
     assertNotOwnOrganization(request, item.organization_id);
     await pool.execute(`UPDATE organization_memberships SET status = ? WHERE id = ? AND tenant_id = ?`, [status, membershipId, request.actor.tenantId]);
-    if (status !== 'active') await pool.execute(`UPDATE platform_refresh_tokens SET revoked_at = NOW() WHERE tenant_id = ? AND user_id = ? AND revoked_at IS NULL`, [request.actor.tenantId, item.user_id]);
+    if (status !== 'active') {
+      await revokeUserSessions(request.actor.tenantId, item.user_id);
+    }
     await domainEvent(request, { eventName: 'SecurityIncidentOpened', entityType: 'organization_membership', entityId: membershipId, payload: { action: 'MEMBERSHIP_STATUS_CHANGED', status, userId: item.user_id, organizationId: item.organization_id } });
     return jsonResponse({ message: 'وضعیت عضویت به‌روزرسانی و حسابرسی شد.', membershipId, status });
   });
@@ -553,7 +676,7 @@ router.get('/cases', platformAuth({ roles: ALL_GOVERNANCE_ROLES, permission: PER
     if (!allowedTypes.length) throw new DomainError(ERROR_CODES.ADMIN_PERMISSION, 'برای این نقش صف پرونده حاکمیتی تعریف نشده است.', 403);
     const typePlaceholders = allowedTypes.map(() => '?').join(', ');
     const [rows] = await pool.execute(
-      `SELECT id, case_type, subject_tenant_id, subject_org_id, subject_type, subject_id, signal, severity, score, source, state, reason, evidence_json,
+      `SELECT id, case_type, subject_tenant_id, subject_org_id, subject_type, subject_id, \`signal\`, severity, score, source, state, reason, evidence_json,
               reviewer_user_id, outcome, remediation, created_by_user_id, created_at, updated_at
          FROM admin_governance_cases
         WHERE tenant_id = ? AND case_type IN (${typePlaceholders}) AND (? = '' OR state = ?)
@@ -583,7 +706,7 @@ router.post('/cases', platformAuth({ roles: [ROLES.SUPER_ADMIN, ROLES.MARKETPLAC
     const evidence = request.body?.evidence && typeof request.body.evidence === 'object' ? redact(request.body.evidence) : {};
     const [result] = await pool.execute(
       `INSERT INTO admin_governance_cases
-        (tenant_id, case_type, subject_tenant_id, subject_org_id, subject_type, subject_id, signal, severity, score, source, state, reason, evidence_json, created_by_user_id)
+        (tenant_id, case_type, subject_tenant_id, subject_org_id, subject_type, subject_id, \`signal\`, severity, score, source, state, reason, evidence_json, created_by_user_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', ?, ?, ?)`,
       [request.actor.tenantId, caseType, request.body?.subjectTenantId || request.actor.tenantId, subjectOrgId, request.body?.subjectType || null, request.body?.subjectId || null, signal, severity, request.body?.score ?? null, request.body?.source || 'manual', reason, JSON.stringify(evidence), request.actor.userId]
     );

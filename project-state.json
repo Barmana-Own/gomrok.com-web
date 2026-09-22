@@ -45,6 +45,7 @@
     "serverTests": "PASS: 19/19",
     "dependencyAudit": "PASS: 0 known vulnerabilities",
     "publicRoleEntryFlow": "PASS: driver/carrier role cards route to role-specific login, then matching registration CTA",
+    "publicRolePanelRoutes": "PASS: six public role links resolve to distinct paths; matching authenticated roles reach the existing workspace and mismatched/no organization sessions never fall back to the driver panel",
     "registrationFieldPresentation": "PASS: registration placeholders removed and click focus remains a single clean field outline on driver and carrier forms",
     "welcomeBrandAlignment": "PASS: welcome status pill remains on the left and GOMROK logo block on the right in RTL, including 390px mobile layout",
     "carrierTerminology": "PASS: user-facing Persian carrier labels use شرکت حمل‌ونقل across login, registration, account, admin and API feedback surfaces",
@@ -53,8 +54,9 @@
     "console": "PASS: no error or warning entries",
     "dockerComposeConfig": "PASS",
     "productionBaseAssetSmoke": "PASS: /app/ hashed JavaScript served as text/javascript",
-    "liveDatabaseMigration": "NOT_RUN: no schema change and no disposable database credentials",
-    "externalDeployment": "NOT_PERFORMED"
+    "liveDatabaseMigration": "PASS: authorized server migration completed successfully",
+    "externalDeployment": "PASS: frontend and backend deployed to the active IIS release and live smoke checks passed",
+    "rolePanelRouteDeployment": "PASS: final client release 20260922-200242 and root release 20260922-195840 verified live"
   },
   "reworkHistory": [
     "Reset legacy Driver/Admin brand selectors that clipped the new ProductLogo.",
@@ -67,9 +69,33 @@
     "Changed public driver and carrier role cards to enter the matching login page first; kept registration reachable through each login page's registration CTA.",
     "Removed example placeholder text from driver and carrier registration inputs and eliminated the nested click-focus rectangle while keeping labels and icons clear.",
     "Made the welcome header's RTL left/right alignment explicit and kept the security status pill visible beside the logo on narrow screens.",
-    "Replaced the previous user-facing Persian carrier terminology with شرکت حمل‌ونقل across public auth/registration, account, admin and registration feedback surfaces without changing carrier role or API identifiers."
+    "Replaced the previous user-facing Persian carrier terminology with شرکت حمل‌ونقل across public auth/registration, account, admin and registration feedback surfaces without changing carrier role or API identifiers.",
+    "Published the current frontend to the active IIS release and published the backend source with the 30-day refresh-token endpoint, preserving server configuration and retaining rollback backups.",
+    "Separated the public six-panel menu into role-specific entry paths and added a fail-closed client route guard that never renders the driver workspace for an unrelated role or missing organization session."
   ],
+  "cargoInquiryModule": {
+    "status": "IMPLEMENTED_PENDING_SCHEMA_MIGRATION",
+    "sourceSpecification": "سند نیازمندی و مشخصات اجرایی فرم جامع استعلام قیمت بار، استعلام از رانندگان و استعلام پشتیبانی، نسخه 1.0، 2026-09-22",
+    "publicRoute": "/app/quote",
+    "formStages": "IMPLEMENTED: nine-stage mobile-first RTL form with route, schedule, cargo, measurement, vehicle, special requirements, site services, documents/contact, and review/consent",
+    "automaticPath": "IMPLEMENTED: guest draft, encrypted replay token, authenticated shipper continuation, server revalidation, eligibility snapshot and driver broadcast",
+    "supportPath": "IMPLEMENTED: guest validation, tracking code, support queue, assignment, request-info, risk decision and versioned manual quotes",
+    "offers": "IMPLEMENTED: eligible-driver projection and driver UI, one-offer-per-driver/version, integer minor-unit pricing, revisions, expiry checks and transactional selection",
+    "structuredSnapshot": "IMPLEMENTED: versioned stops, items, special requirements, consents, broadcasts, offer revisions, support quotes, messages, notifications and risk reviews",
+    "statusLifecycle": "IMPLEMENTED: server state plus client-safe status mapping for draft, review, support, matching, open quotes, received quotes, selected quote, cancellation and expiry",
+    "sensitiveDataProtection": "IMPLEMENTED: encrypted payload fields for contact, address, value and special requirements; masked scalar contacts; privacy-safe driver projection",
+    "migrationArtifact": "server/migrations/20260922_cargo-inquiry.sql",
+    "migrationExecution": "NOT_RUN_BY_DESIGN",
+    "fileStorageIntegration": "NOT_CONFIGURED: document routes fail closed with FILE_STORAGE_NOT_CONFIGURED until private storage and scanning are selected",
+    "validation": {
+      "serverTests": "PASS: 131/131",
+      "clientTests": "PASS: 4/4",
+      "productionBuild": "PASS",
+      "cargoOpenApiLint": "PASS: zero errors and zero warnings",
+      "databaseMigration": "NOT_RUN"
+    }
+  },
   "nextStage": null,
   "workflowStatus": "COMPLETE",
-  "updatedAt": "2026-09-01"
+  "updatedAt": "2026-09-22"
 }

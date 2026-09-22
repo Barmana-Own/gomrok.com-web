@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { encodePurposeHeader } from '../hooks/realtime-request.js';
 import { usePlatformRealtime } from '../hooks/usePlatformRealtime.js';
 import { RiskBadge } from './PlatformPrimitives.jsx';
 import { NavigationIcon, ProductLogo } from './ProductIcon.jsx';
@@ -22,6 +23,7 @@ const roleLabels = {
 const menu = [
   ['dashboard', 'داشبورد حاکمیت'],
   ['users', 'Users / Memberships'],
+  ['legacyRegistrations', 'ثبت‌نام‌های قبلی'],
   ['organizations', 'سازمان‌ها و Tenantها'],
   ['qualification', 'KYC / صلاحیت'],
   ['marketplace', 'حاکمیت RFQ / بازار'],
@@ -42,6 +44,7 @@ const menu = [
 ];
 
 const roleMenu = {
+  legacyRegistrations: ['super_admin'],
   qualification: ['super_admin', 'marketplace_admin', 'compliance_officer'],
   marketplace: ['super_admin', 'marketplace_admin', 'conflict_officer', 'risk_manager', 'security_admin'],
   trips: ['super_admin', 'marketplace_admin', 'security_admin', 'compliance_officer', 'risk_manager'],
@@ -73,7 +76,7 @@ function randomKey(prefix = 'admin') {
 }
 
 function requestJson(apiUrl, path, token, options = {}) {
-  const purposeHeader = encodeURIComponent(String(options.purpose || '').trim()).slice(0, 512);
+  const purposeHeader = encodePurposeHeader(options.purpose);
   const headers = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
@@ -107,8 +110,10 @@ function stateLabel(value) {
     RESTRICTED: 'محدودشده',
     RESOLVED: 'مختومه',
     REQUESTED: 'درخواست‌شده',
+    PENDING: 'در انتظار بررسی',
     APPROVED: 'تأییدشده',
     REJECTED: 'ردشده',
+    DISABLED: 'غیرفعال',
     ACTIVE: 'فعال',
     DRAFT: 'پیش‌نویس',
     REVIEW: 'در بازبینی',
@@ -153,6 +158,7 @@ function AdminGovernancePanel({ user, token, apiUrl, onLogout }) {
     const paths = {
       dashboard: '/api/platform/admin/dashboard',
       users: '/api/platform/admin/users?limit=100',
+      legacyRegistrations: '/api/platform/admin/legacy-registrations?limit=100',
       organizations: '/api/platform/admin/organizations?limit=100',
       qualification: '/api/platform/admin/qualification?limit=100',
       marketplace: '/api/platform/admin/marketplace?limit=100',
@@ -186,7 +192,7 @@ function AdminGovernancePanel({ user, token, apiUrl, onLogout }) {
 
   useEffect(() => { load(activeTab); }, [activeTab]);
 
-  usePlatformRealtime({ apiUrl, token, onEvent: () => load(activeTab) });
+  usePlatformRealtime({ apiUrl, token, purpose, onEvent: () => load(activeTab) });
 
   const perform = async (path, method, body = {}, options = {}) => {
     setLoading(true);
@@ -216,11 +222,28 @@ function AdminGovernancePanel({ user, token, apiUrl, onLogout }) {
   const cases = data.cases?.cases || [];
   const roleTitle = roleLabels[role] || role;
 
-  const renderDashboard = () => <>
-    <section className="admin-governance-hero"><div><span className="admin-governance-eyebrow">MARKETPLACE GOVERNANCE · SERVER ENFORCED</span><h1>کنترل‌تاور بی‌طرفی و امنیت</h1><p>داده تجاری حساس در این read model برنمی‌گردد؛ هر اقدام به نقش، هدف، Tenant و حسابرسی متصل است.</p></div><div className="admin-governance-guard"><strong>{roleTitle}</strong><span>Tenant: {user?.tenantId || 'platform'}</span><small>AI binding actions: disabled</small></div></section>
-    <section className="admin-governance-stats"><StatCard label="سازمان‌ها" value={metrics.organizations} hint="در محدوده Tenant" /><StatCard label="پرونده‌های باز" value={metrics.openGovernanceCases} hint="ریسک، انطباق، تعارض" /><StatCard label="Break-Glass در انتظار" value={metrics.pendingBreakGlass} hint="نیازمند کنترل دومرحله‌ای" /><StatCard label="RulePack فعال" value={metrics.activeRulePacks} hint="نسخه‌گذاری‌شده" /><StatCard label="خروجی‌های در انتظار" value={metrics.pendingExports} hint="بدون export-all" /><StatCard label="Audit در ۲۴ ساعت" value={metrics.auditEvents24h} hint="append-only" /></section>
-    <section className="admin-governance-grid"><article className="admin-governance-panel"><div className="admin-governance-panel__heading"><div><span className="admin-governance-kicker">ACCESS BOUNDARY</span><h2>مرزهای این نشست</h2></div></div><div className="admin-governance-boundaries"><span><b>Quote body</b><strong>مخفی</strong></span><span><b>Market A / B</b><strong>تفکیک‌شده</strong></span><span><b>Audit delete</b><strong>غیرفعال</strong></span><span><b>AI award</b><strong>ممنوع</strong></span></div></article><article className="admin-governance-panel"><div className="admin-governance-panel__heading"><div><span className="admin-governance-kicker">RFQ SEAL MONITOR</span><h2>وضعیت بازارها</h2></div></div>{dashboard.rfqs?.length ? <div className="admin-governance-mini-list">{dashboard.rfqs.map((item) => <div key={`${item.level}-${item.state}`}><span>{item.level}</span><strong>{stateLabel(item.state)}</strong><small>{Number(item.total || 0).toLocaleString('fa-IR')} دفتر</small></div>)}</div> : <EmptyState>دفتری برای نمایش نیست.</EmptyState>}</article></section>
-  </>;
+  const renderDashboard = () => {
+    const legacy = dashboard.legacy || {};
+    const accounts = legacy.accounts || {};
+    const requests = legacy.requests || {};
+    return <>
+      <section className="admin-governance-hero"><div><span className="admin-governance-eyebrow">MARKETPLACE GOVERNANCE · SERVER ENFORCED</span><h1>کنترل‌تاور بی‌طرفی و امنیت</h1><p>داده تجاری حساس در این read model برنمی‌گردد؛ هر اقدام به نقش، هدف، Tenant و حسابرسی متصل است.</p></div><div className="admin-governance-guard"><strong>{roleTitle}</strong><span>Tenant: {user?.tenantId || 'platform'}</span><small>AI binding actions: disabled</small></div></section>
+      <section className="admin-governance-stats"><StatCard label="سازمان‌ها" value={metrics.organizations} hint="در محدوده Tenant" /><StatCard label="پرونده‌های باز" value={metrics.openGovernanceCases} hint="ریسک، انطباق، تعارض" /><StatCard label="Break-Glass در انتظار" value={metrics.pendingBreakGlass} hint="نیازمند کنترل دومرحله‌ای" /><StatCard label="RulePack فعال" value={metrics.activeRulePacks} hint="نسخه‌گذاری‌شده" /><StatCard label="خروجی‌های در انتظار" value={metrics.pendingExports} hint="بدون export-all" /><StatCard label="Audit در ۲۴ ساعت" value={metrics.auditEvents24h} hint="append-only" /></section>
+      <section className="admin-governance-stats"><StatCard label="حساب راننده" value={accounts.drivers?.total} hint={`${Number(requests.drivers?.pending || 0).toLocaleString('fa-IR')} ثبت‌نام در انتظار`} /><StatCard label="حساب کریر" value={accounts.carriers?.total} hint={`${Number(requests.carriers?.pending || 0).toLocaleString('fa-IR')} ثبت‌نام در انتظار`} /><StatCard label="ثبت‌نام راننده" value={requests.drivers?.total} hint="داده واقعی ثبت‌نام قبلی" /><StatCard label="ثبت‌نام کریر" value={requests.carriers?.total} hint="داده واقعی ثبت‌نام قبلی" /></section>
+      <section className="admin-governance-grid"><article className="admin-governance-panel"><div className="admin-governance-panel__heading"><div><span className="admin-governance-kicker">ACCESS BOUNDARY</span><h2>مرزهای این نشست</h2></div></div><div className="admin-governance-boundaries"><span><b>Quote body</b><strong>مخفی</strong></span><span><b>Market A / B</b><strong>تفکیک‌شده</strong></span><span><b>Audit delete</b><strong>غیرفعال</strong></span><span><b>AI award</b><strong>ممنوع</strong></span></div></article><article className="admin-governance-panel"><div className="admin-governance-panel__heading"><div><span className="admin-governance-kicker">RFQ SEAL MONITOR</span><h2>وضعیت بازارها</h2></div></div>{dashboard.rfqs?.length ? <div className="admin-governance-mini-list">{dashboard.rfqs.map((item) => <div key={`${item.level}-${item.state}`}><span>{item.level}</span><strong>{stateLabel(item.state)}</strong><small>{Number(item.total || 0).toLocaleString('fa-IR')} دفتر</small></div>)}</div> : <EmptyState>دفتری برای نمایش نیست.</EmptyState>}</article></section>
+      <section className="admin-governance-panel"><div className="admin-governance-panel__heading"><div><span className="admin-governance-kicker">LEGACY REGISTRATION READ MODEL</span><h2>داده‌های ثبت‌نام قبلی</h2></div><button className="platform-button" type="button" onClick={() => setActiveTab('legacyRegistrations')}>مشاهده جزئیات</button></div>{legacy.recent?.length ? <Table headers={['نوع', 'نام / شرکت', 'وضعیت', 'تماس', 'شناسه', 'ثبت‌شده']}>{legacy.recent.slice(0, 6).map((item) => <tr key={`${item.role}-${item.id}`}><td>{item.role === 'driver' ? 'راننده' : 'کریر'}</td><td><strong>{item.displayName}</strong><small>درخواست #{item.id}{item.accountCreated ? ' · حساب فعال' : ''}</small></td><td>{stateLabel(String(item.status || '').toUpperCase())}</td><td className="admin-governance-ltr">{item.phone || '—'}</td><td className="admin-governance-ltr">{item.identity || item.registrationNumber || '—'}</td><td>{formatDate(item.createdAt)}</td></tr>)}</Table> : <EmptyState>درخواست ثبت‌نام قبلی برای این Tenant ثبت نشده است.</EmptyState>}</section>
+    </>;
+  };
+
+  const renderLegacyRegistrations = () => {
+    const legacy = data.legacyRegistrations?.legacy || {};
+    const accounts = legacy.accounts || {};
+    const requests = legacy.requests || {};
+    return <>
+      <section className="admin-governance-stats"><StatCard label="حساب راننده" value={accounts.drivers?.total} hint={`${Number(accounts.drivers?.active || 0).toLocaleString('fa-IR')} فعال`} /><StatCard label="حساب کریر" value={accounts.carriers?.total} hint={`${Number(accounts.carriers?.active || 0).toLocaleString('fa-IR')} فعال`} /><StatCard label="ثبت‌نام راننده" value={requests.drivers?.total} hint={`${Number(requests.drivers?.pending || 0).toLocaleString('fa-IR')} در انتظار`} /><StatCard label="ثبت‌نام کریر" value={requests.carriers?.total} hint={`${Number(requests.carriers?.pending || 0).toLocaleString('fa-IR')} در انتظار`} /></section>
+      <section className="admin-governance-panel"><div className="admin-governance-panel__heading"><div><span className="admin-governance-kicker">LEGACY REGISTRATION READ MODEL</span><h2>ثبت‌نام‌ها و حساب‌های قبلی</h2></div><span className="admin-governance-append-only">دسترسی فقط برای Super Admin</span></div>{legacy.recent?.length ? <Table headers={['نوع', 'نام / شرکت', 'وضعیت', 'تماس', 'شناسه', 'حساب', 'تاریخ']}>{legacy.recent.map((item) => <tr key={`${item.role}-${item.id}`}><td>{item.role === 'driver' ? 'راننده' : 'کریر'}</td><td><strong>{item.displayName}</strong><small>درخواست #{item.id}</small></td><td>{stateLabel(String(item.status || '').toUpperCase())}</td><td className="admin-governance-ltr">{item.phone || '—'}</td><td className="admin-governance-ltr">{item.identity || item.registrationNumber || '—'}</td><td>{item.accountCreated ? 'ایجادشده' : 'در انتظار ایجاد'}</td><td>{formatDate(item.createdAt)}</td></tr>)}</Table> : <EmptyState>ثبت‌نام قبلی برای این Tenant وجود ندارد.</EmptyState>}</section>
+    </>;
+  };
 
   const renderOrganizations = () => <section className="admin-governance-panel"><div className="admin-governance-panel__heading"><div><span className="admin-governance-kicker">TENANT ISOLATION</span><h2>سازمان‌ها و عضویت‌ها</h2></div><button className="platform-button" type="button" onClick={() => load('organizations')}>بروزرسانی</button></div>{data.organizations?.organizations?.length ? <Table headers={['سازمان', 'نوع', 'وضعیت', 'صلاحیت', 'آخرین تغییر']}>{data.organizations.organizations.map((item) => <tr key={item.id}><td><strong>{item.displayName}</strong><small>{item.id}</small></td><td>{item.organizationType}</td><td><span className={`admin-governance-state admin-governance-state--${item.status}`}>{stateLabel(item.status)}</span></td><td>{stateLabel(item.qualificationState)}</td><td>{formatDate(item.updatedAt)}</td></tr>)}</Table> : <EmptyState />}</section>;
 
@@ -258,7 +281,7 @@ function AdminGovernancePanel({ user, token, apiUrl, onLogout }) {
 
   const renderHealth = () => <section className="admin-governance-panel"><div className="admin-governance-panel__heading"><div><span className="admin-governance-kicker">TECHNICAL READ MODEL</span><h2>سلامت سیستم و Backup/DR</h2></div></div>{data.health?.components ? <div className="admin-governance-health-grid">{Object.entries(data.health.components).map(([name, item]) => <article key={name}><span>{name}</span><strong className={item.state === 'ok' || item.state === 'configured' ? 'is-ok' : 'is-muted'}>{item.state}</strong>{item.rpo && <small>RPO {item.rpo} · RTO {item.rto || '—'}</small>}</article>)}</div> : <EmptyState />}</section>;
 
-  const rendered = { dashboard: renderDashboard, users: renderUsers, organizations: renderOrganizations, qualification: renderQualification, marketplace: renderMarketplace, trips: renderTrips, cases: renderCases, audit: renderAudit, breakglass: renderBreakGlass, rulepacks: renderRulePacks, pricing: renderPricing, finance: renderFinance, claims: renderClaims, exports: renderExports, security: renderSecurity, crm: renderCrm, bi: renderBi, ai: renderAi, health: renderHealth }[activeTab]?.() || renderDashboard();
+  const rendered = { dashboard: renderDashboard, users: renderUsers, legacyRegistrations: renderLegacyRegistrations, organizations: renderOrganizations, qualification: renderQualification, marketplace: renderMarketplace, trips: renderTrips, cases: renderCases, audit: renderAudit, breakglass: renderBreakGlass, rulepacks: renderRulePacks, pricing: renderPricing, finance: renderFinance, claims: renderClaims, exports: renderExports, security: renderSecurity, crm: renderCrm, bi: renderBi, ai: renderAi, health: renderHealth }[activeTab]?.() || renderDashboard();
 
   const selectAdminTab = (key) => {
     closeMenu();

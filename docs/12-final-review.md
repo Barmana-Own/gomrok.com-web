@@ -24,9 +24,9 @@ PASS for the requested complete frontend redesign. All protected routes, panels,
 | Browser console | PASS | No errors or warnings |
 | Docker configuration | PASS | Compose config validated |
 | Production base/asset smoke | PASS | `/app/` preview served its hashed JavaScript asset as `text/javascript` |
-| Live MySQL migration | NOT_RUN | No disposable database credentials; schema unchanged |
+| Live MySQL migration | PASS | Existing idempotent `npm --workspace server run db:migrate` completed on the authorized server |
 | Live authenticated business mutations | NOT_RUN | No test accounts/data; contracts unchanged |
-| External production deployment | NOT_RUN | Not requested and no target credentials supplied |
+| External production deployment | PASS | Frontend and backend deployed to the active IIS release; live asset, PWA, API refresh-route and health smoke checks passed |
 
 ## Security and integrity
 

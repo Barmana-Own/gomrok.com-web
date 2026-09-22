@@ -52,11 +52,11 @@ Development-only design previews (these routes are disabled in production builds
 - `http://127.0.0.1:5083/app/preview/agent` — Agent Z / destination
 - `http://127.0.0.1:5083/app/preview/admin` — Admin / Governance
 
-The preview hub also links directly to `/app`, `/driver-login`, `/carrier-login`, `/app/driver`, `/app/careers`, and `/admin/v2`. Panel previews render the real components with empty local read models so navigation, responsive layout, states, and interaction design can be reviewed without registration or production data. They do not weaken production authentication or authorization.
+The preview hub also links directly to `/app`, `/driver-login`, `/carrier-login`, `/app/driver`, `/app/careers`, `/app/driver/register`, `/app/careers/register`, and `/admin/v2`. Panel previews render the real components with empty local read models so navigation, responsive layout, states, and interaction design can be reviewed without registration or production data. They do not weaken production authentication or authorization.
 
 The Route Pulse design system is implemented in `client/src/route-pulse.css`, `client/src/components/ProductIcon.jsx`, and `design/tokens.json`. Its brand foundation uses `#140e04`, `#ededff`, `#0afa82`, `#4363ea`, and `#4c7cff` with RTL-first responsive behavior.
 
-The current `/app/driver` and `/app/careers` flows collect the requested base information as pending registration requests. An admin must approve a request before the driver or carrier account is created. The `/admin/v2` workspace is the Marketplace Governance console: staff roles, tenant-scoped organizations, human KYC/qualification decisions, sealed RFQ monitoring, risk/compliance/conflict queues, append-only audit, dual-control Break-Glass, versioned RulePacks, relationship-ledger governance, contact-reveal/export oversight, AI monitor and technical health are separately authorized by the server.
+The current `/app/driver` and `/app/careers` routes open the role-specific login first. The registration links lead to `/app/driver/register` and `/app/careers/register`, which collect the requested base information as pending registration requests. Successful login restores a rotating refresh session for up to 30 days and keeps the phone number available for the next login; passwords remain under browser password-manager control and are never stored by the application. An admin must approve a request before the driver or carrier account is created. The `/admin/v2` workspace is the Marketplace Governance console: staff roles, tenant-scoped organizations, human KYC/qualification decisions, sealed RFQ monitoring, risk/compliance/conflict queues, append-only audit, dual-control Break-Glass, versioned RulePacks, relationship-ledger governance, contact-reveal/export oversight, AI monitor and technical health are separately authorized by the server.
 
 ## Shared platform contract foundation
 
@@ -72,7 +72,7 @@ The Agent/Z destination surface is implemented in `client/src/components/AgentPa
 
 The Admin / Marketplace Governance surface is implemented in `client/src/components/AdminGovernancePanel.jsx` and `server/src/routes/admin.routes.js`. Super Admin is not granted blanket commercial access: quote bodies and raw contacts remain redacted, RFQ governance exposes only seal/deadline/access metadata, RulePacks cannot be silently edited, critical notifications cannot be disabled, and high-risk actions require an attributable step-up token plus idempotency key.
 
-Sensitive platform writes require `X-Idempotency-Key`. Access JWTs are short-lived and `/api/auth/refresh` rotates refresh tokens. Platform JWTs are tied to an active organization membership; the server derives tenant and organization scope from that membership rather than trusting request payloads.
+Sensitive platform writes require the canonical `Idempotency-Key` header or the accepted legacy alias `X-Idempotency-Key`; conflicting values are rejected. Access JWTs are short-lived and `/api/auth/refresh` rotates refresh tokens. Platform JWTs are tied to an active organization membership; the server derives tenant and organization scope from that membership rather than trusting request payloads.
 
 All six surfaces share the same tenant-scoped API and domain event stream. `/api/platform/realtime` is an authenticated SSE stream for safe event metadata; each panel falls back to bounded polling when the stream is unavailable. The MVP broker is process-local, so production horizontal scaling requires a shared pub/sub adapter before running multiple API instances.
 
@@ -95,11 +95,17 @@ Registration endpoints:
 
 ## Production app path
 
-The production build for the mobile web app uses `/app/` as its base path and `/app/api` as its same-origin API prefix. The Windows deployment helper is `deploy-apk.ps1`; it prompts for the server password without writing it to the repository, stages the frontend, copies the Docker Compose file, runs the database migration, and registers the API as the `GomrokAppApi` scheduled task. When Docker is available, it starts the `gomrok-mysql` service on port `3308`; otherwise it keeps the existing local database on port `3307` and does not interrupt the site.
+The production build for the mobile web app uses `/app/` as its base path and `/app/api` as its same-origin API prefix. For a frontend-only release, use `deploy-frontend.ps1`; it discovers the active IIS release path, stages the built app atomically, and keeps a server-side backup. For backend source updates without replacing production configuration or dependencies, use `deploy-backend.ps1`; it preserves the existing `.env`, `node_modules`, scheduled-task configuration, and creates a source backup before restarting `GomrokAppApi`. To publish the supplied static customs homepage at `/` while preserving `/app`, use `deploy-root-homepage.ps1`; it stages the ZIP's `dist` output, changes only the root rewrite target, and keeps a server-side root backup. The broader `deploy-apk.ps1` remains available for a full infrastructure/bootstrap deployment and may update database/runtime configuration, so it should not be used for a routine UI release.
 
 Public routes:
 
-- `https://gomrok.org/app` — role selection
-- `https://gomrok.org/app/driver` — driver registration
-- `https://gomrok.org/app/careers` — carrier registration
+- `https://gomrok.org/app` — driver login entry
+- `https://gomrok.org/app/driver` — driver login
+- `https://gomrok.org/app/careers` — carrier login
+- `https://gomrok.org/app/driver/register` — driver registration
+- `https://gomrok.org/app/careers/register` — carrier registration
 - `https://gomrok.org/admin/v2` — admin panel
+
+## Root homepage responsive release
+
+The public `/` homepage retains the remaining landing-page sections and no longer renders the oversized customer-logo wall or the secondary partner-logo block. It sizes the hero canvas from its rendered mobile media viewport, including `visualViewport` and orientation changes. The scroll-driven hero requests now pass their priority argument, which prevents the runtime error that stopped frame updates, and the mobile layout uses a single-column contact form with constrained scroll guidance. Mobile viewport changes no longer call the platform carousel's vertical `scrollIntoView`, preventing a jump to the lower page while leaving the video/feature section. On mobile, platform cards now occupy the full viewport width with no visible slice of the next card. The page also disables browser scroll restoration so a refresh does not restore a stale lower-page position. The homepage message now presents the product as an intelligent international freight-transport and customs-clearance platform; the hero, pathways, calculator, feature cards, platform cards, contact copy, FAQ and footer mention transport routes, fleet, shipping documents and clearance where relevant. The existing local Vazirmatn variable font is explicitly shipped and preloaded for the standalone root homepage so it does not fall back to the browser default. The header's `سامانه` menu exposes six role-oriented production entry links, each opening in a new tab; shared roles continue through `/app/` and are routed by server authorization, while carrier, driver and administration use their dedicated production entry paths. The homepage also includes a detailed transport/customs explanation, role-specific problem/solution cards, a capability table, and a source-noted comparison with domestic load-board platforms and global logistics platforms. The corrected static package was deployed with `deploy-root-homepage.ps1`; `/app` and its API remain preserved.

@@ -2,19 +2,41 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createHash, randomBytes } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 import 'dotenv/config';
 import { pingDatabase, pool } from './db.js';
 import platformRouter from './routes/platform.routes.js';
 import adminRouter from './routes/admin.routes.js';
-import { ADMIN_PASSWORD, ADMIN_USERNAME, IS_PRODUCTION, JWT_SECRET } from './config.js';
-import { idempotencyKey, platformAuth } from './security/platform-auth.js';
-import { PERMISSIONS, ROLES } from '../../shared/contract.js';
+import cargoInquiryRouter from './routes/cargo-inquiry.routes.js';
+import {
+  ADMIN_PASSWORD,
+  ADMIN_USERNAME,
+  IS_PRODUCTION,
+  JWT_SECRET,
+  OPERATING_CONTEXT_SESSIONS_ENABLED,
+  PLATFORM_TENANT_ID
+} from './config.js';
+import { platformAuth, resolveIdempotencyKey } from './security/platform-auth.js';
+import { CONTEXT_SESSION_MODES, ERROR_CODES, PERMISSIONS, ROLES } from '../../shared/contract.js';
+import {
+  assertContextSessionFeatureEnabled,
+  createOperatingContextSessionService,
+  publicOperatingContext
+} from './services/operating-context-session.service.js';
+import {
+  publicPlatformUser,
+  selectPlatformMembership,
+  validatePlatformLoginInput
+} from './services/platform-login.service.js';
+import { invalidateRealtimeSession } from './realtime/broker.js';
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
 const jwtSecret = JWT_SECRET;
 const adminUsername = ADMIN_USERNAME;
 const adminPassword = ADMIN_PASSWORD;
+const operatingContextSessionService = createOperatingContextSessionService(pool);
+const platformLoginDummyHash = bcrypt.hashSync(`invalid-platform-login:${randomBytes(24).toString('hex')}`, 10);
 
 const configuredOrigins = String(process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || '')
   .split(',')
@@ -80,7 +102,7 @@ app.use((request, response, next) => {
 
   if (request.method === 'OPTIONS') {
     response.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-    response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Correlation-Id, X-Idempotency-Key, X-Purpose-Scope, X-Device-Id, X-Step-Up-Token, X-Step-Up');
+    response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Correlation-Id, Idempotency-Key, X-Idempotency-Key, X-Operating-Context, X-Purpose-Scope, X-Device-Id, X-Step-Up-Token, X-Step-Up');
     return response.status(204).end();
   }
 
@@ -103,8 +125,8 @@ function digits(value = '') {
   return normalizeDigits(value).replace(/\D/g, '');
 }
 
-function issueToken(account, role = 'driver', membership = {}) {
-  return jwt.sign({
+function issueToken(account, role = 'driver', membership = {}, session = null) {
+  const claims = {
     sub: String(account.id),
     userId: membership.userId || account.id,
     membershipId: membership.membershipId || null,
@@ -113,7 +135,57 @@ function issueToken(account, role = 'driver', membership = {}) {
     externalId: membership.externalId || account.id,
     role,
     tenantId: account.tenant_id
-  }, jwtSecret, { expiresIn: '15m' });
+  };
+  if (session) {
+    claims.sessionId = session.sessionId;
+    claims.sessionMode = session.mode;
+    claims.sessionGeneration = session.generation;
+    claims.contextId = session.activeContextId || null;
+  }
+  return jwt.sign(claims, jwtSecret, { expiresIn: '15m' });
+}
+
+function sessionTokenResponse(result) {
+  const account = {
+    id: result.binding.externalId || result.binding.userId,
+    tenant_id: result.binding.tenantId
+  };
+  return {
+    token: issueToken(account, result.binding.role, result.binding, result.session),
+    refreshToken: result.refreshToken,
+    session: {
+      mode: result.session.mode,
+      generation: result.session.generation,
+      contextSelectionRequired: result.session.mode === CONTEXT_SESSION_MODES.BOOTSTRAP,
+      activeContext: result.session.mode === CONTEXT_SESSION_MODES.CONTEXT
+        ? publicOperatingContext(result.binding)
+        : null,
+      expiresAt: new Date(result.session.expiresAt).toISOString()
+    }
+  };
+}
+
+function contextSessionProblem(response, request, error) {
+  const status = Number(error.status || error.statusCode || 500);
+  const code = error.code || 'CTX-500';
+  const safeCodes = new Set(['AUTH-401', 'AUTH-403', 'CTX-001', 'CTX-004', 'CTX-503']);
+  return response.status(status).type('application/problem+json').json({
+    type: `https://gomrok.org/problems/${code}`,
+    title: code,
+    status,
+    detail: safeCodes.has(code) && error.message ? error.message : 'عملیات نشست زمینه انجام نشد.',
+    code,
+    correlationId: request.correlationId
+  });
+}
+
+function requireContextSessionFeature(request, response, next) {
+  try {
+    assertContextSessionFeatureEnabled(OPERATING_CONTEXT_SESSIONS_ENABLED);
+    return next();
+  } catch (error) {
+    return contextSessionProblem(response, request, error);
+  }
 }
 
 function issueAdminToken() {
@@ -287,8 +359,8 @@ function validateCarrier(payload) {
   return '';
 }
 
-async function writeAudit({ actorId, eventType, subjectType = 'driver', subjectId, payload = {} }) {
-  await pool.execute(
+async function writeAudit({ actorId, eventType, subjectType = 'driver', subjectId, payload = {}, executor = pool }) {
+  await executor.execute(
     `INSERT INTO audit_events (actor_id, event_type, subject_type, subject_id, payload_json)
      VALUES (?, ?, ?, ?, ?)`,
     [actorId || null, eventType, subjectType, subjectId || null, JSON.stringify(payload)]
@@ -698,7 +770,7 @@ async function ensurePlatformMembership(account, accountType) {
     `SELECT id FROM organization_memberships WHERE tenant_id = ? AND organization_id = ? AND user_id = ? AND role = ? LIMIT 1`,
     [tenantId, organizationId, userId, role]
   );
-  return { userId, membershipId: memberships[0]?.id, organizationId, externalType: accountType, externalId: account.id };
+  return { userId, membershipId: memberships[0]?.id, organizationId, externalType: accountType, externalId: account.id, role };
 }
 
 function hashRefreshToken(token) {
@@ -715,7 +787,20 @@ async function issueRefreshToken(account, membership) {
   return token;
 }
 
-async function rotateRefreshToken(token) {
+async function issueLoginTokens(account, role, membership) {
+  if (OPERATING_CONTEXT_SESSIONS_ENABLED) {
+    const contextSession = await operatingContextSessionService.startLoginSession({
+      tenantId: account.tenant_id,
+      userId: membership.userId,
+      originMembershipId: membership.membershipId
+    });
+    if (contextSession) return sessionTokenResponse(contextSession);
+  }
+  const refreshToken = await issueRefreshToken(account, membership);
+  return { token: issueToken(account, role, membership), refreshToken };
+}
+
+async function rotateLegacyRefreshToken(token) {
   const tokenHash = hashRefreshToken(token);
   const [rows] = await pool.execute(
     `SELECT r.*, m.organization_id, m.role, u.external_type, u.external_id
@@ -748,14 +833,98 @@ async function rotateRefreshToken(token) {
 }
 
 app.post('/api/auth/refresh', authRateLimit, async (request, response) => {
-  const refreshToken = String(request.body?.refreshToken || '').trim();
+  const refreshToken = typeof request.body?.refreshToken === 'string' ? request.body.refreshToken : '';
   if (!refreshToken) return response.status(400).json({ code: 'AUTH-400', message: 'توکن نوسازی لازم است.' });
   try {
-    return response.json(await rotateRefreshToken(refreshToken));
+    if (OPERATING_CONTEXT_SESSIONS_ENABLED) {
+      const contextRotation = await operatingContextSessionService.rotateContextRefreshToken(refreshToken);
+      if (contextRotation) return response.json(sessionTokenResponse(contextRotation));
+    }
+    return response.json(await rotateLegacyRefreshToken(refreshToken));
   } catch (error) {
-    return response.status(error.statusCode || 500).json({ code: error.code || 'AUTH-500', message: error.message || 'نوسازی نشست انجام نشد.' });
+    if (
+      error?.code === ERROR_CODES.CONTEXT_BINDING ||
+      error?.code === ERROR_CODES.CONTEXT_SESSION_CONFLICT
+    ) {
+      return contextSessionProblem(response, request, error);
+    }
+    const status = Number(error.status || error.statusCode || 500);
+    const code = error.code || 'AUTH-500';
+    const safeCodes = new Set(['AUTH-401']);
+    return response.status(status).json({
+      code,
+      message: safeCodes.has(code) && error.message ? error.message : 'نوسازی نشست انجام نشد.'
+    });
   }
 });
+
+app.get(
+  '/api/platform/me/contexts',
+  requireContextSessionFeature,
+  platformAuth({ sessionMode: 'selection' }),
+  async (request, response) => {
+    try {
+      const contexts = await operatingContextSessionService.listAvailableContexts({
+        tenantId: request.contextSession.tenantId,
+        userId: request.contextSession.userId
+      });
+      return response.json({
+        session: {
+          mode: request.contextSession.sessionMode,
+          generation: request.contextSession.sessionGeneration,
+          activeContextId: request.contextSession.contextId
+        },
+        contexts: contexts.map(publicOperatingContext)
+      });
+    } catch (error) {
+      return contextSessionProblem(response, request, error);
+    }
+  }
+);
+
+app.post(
+  '/api/auth/context/select',
+  requireContextSessionFeature,
+  authRateLimit,
+  platformAuth({ sessionMode: 'bootstrap' }),
+  async (request, response) => {
+    try {
+      const result = await operatingContextSessionService.transitionContext({
+        claims: request.contextSession,
+        targetContextId: request.body?.targetContextId,
+        rawRefreshToken: request.body?.refreshToken,
+        expectedMode: CONTEXT_SESSION_MODES.BOOTSTRAP,
+        correlationId: request.correlationId
+      });
+      invalidateRealtimeSession(result.session.sessionId, result.session.generation);
+      return response.json(sessionTokenResponse(result));
+    } catch (error) {
+      return contextSessionProblem(response, request, error);
+    }
+  }
+);
+
+app.post(
+  '/api/auth/context/switch',
+  requireContextSessionFeature,
+  authRateLimit,
+  platformAuth({ sessionMode: 'context' }),
+  async (request, response) => {
+    try {
+      const result = await operatingContextSessionService.transitionContext({
+        claims: request.contextSession,
+        targetContextId: request.body?.targetContextId,
+        rawRefreshToken: request.body?.refreshToken,
+        expectedMode: CONTEXT_SESSION_MODES.CONTEXT,
+        correlationId: request.correlationId
+      });
+      invalidateRealtimeSession(result.session.sessionId, result.session.generation);
+      return response.json(sessionTokenResponse(result));
+    } catch (error) {
+      return contextSessionProblem(response, request, error);
+    }
+  }
+);
 
 app.post('/api/auth/login', authRateLimit, async (request, response) => {
   const phone = normalizeDigits(request.body?.phone).replace(/\s/g, '');
@@ -769,9 +938,9 @@ app.post('/api/auth/login', authRateLimit, async (request, response) => {
       return response.status(401).json({ message: 'حساب راننده فعال نیست یا اطلاعات ورود اشتباه است.' });
     }
     const membership = await ensurePlatformMembership(driver, 'driver');
-    const refreshToken = await issueRefreshToken(driver, membership);
+    const tokens = await issueLoginTokens(driver, 'driver', membership);
     await writeAudit({ actorId: driver.id, eventType: 'DriverLoggedIn', subjectId: driver.id, payload: { source: 'mobile-web', organizationId: membership.organizationId } });
-    return response.json({ token: issueToken(driver, 'driver', membership), refreshToken, user: publicDriver(driver) });
+    return response.json({ ...tokens, user: publicDriver(driver) });
   } catch (error) {
     console.error(error);
     return response.status(500).json({ message: 'ورود انجام نشد؛ اتصال دیتابیس را بررسی کن.' });
@@ -790,17 +959,121 @@ app.post('/api/auth/login-carrier', authRateLimit, async (request, response) => 
       return response.status(401).json({ message: 'حساب شرکت حمل‌ونقل فعال نیست یا اطلاعات ورود اشتباه است.' });
     }
     const membership = await ensurePlatformMembership(carrier, 'carrier');
-    const refreshToken = await issueRefreshToken(carrier, membership);
+    const tokens = await issueLoginTokens(carrier, 'company_y_owner', membership);
     await writeAudit({ actorId: carrier.id, eventType: 'CarrierLoggedIn', subjectType: 'carrier', subjectId: carrier.id, payload: { source: 'mobile-web', organizationId: membership.organizationId } });
-    return response.json({ token: issueToken(carrier, 'company_y_owner', membership), refreshToken, user: publicCarrier(carrier) });
+    return response.json({ ...tokens, user: publicCarrier(carrier) });
   } catch (error) {
     console.error(error);
     return response.status(500).json({ message: 'ورود شرکت حمل‌ونقل انجام نشد؛ اتصال دیتابیس را بررسی کن.' });
   }
 });
 
+app.post('/api/auth/login-platform', authRateLimit, async (request, response) => {
+  let input;
+  try {
+    input = validatePlatformLoginInput(request.body);
+  } catch (error) {
+    return response.status(Number(error.status || 400)).json({ code: error.code || 'AUTH-400', message: error.message });
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      `SELECT c.id AS credential_id, c.user_id, c.password_hash, c.failed_attempts, c.locked_until,
+              u.tenant_id, u.external_type, u.external_id, u.display_name,
+              m.id AS membership_id, m.organization_id, m.role, m.transaction_role,
+              o.organization_type, o.display_name AS organization_display_name
+         FROM platform_user_credentials c
+         JOIN platform_users u ON u.id = c.user_id AND u.tenant_id = c.tenant_id
+         JOIN organization_memberships m ON m.user_id = u.id AND m.tenant_id = u.tenant_id
+         JOIN platform_organizations o ON o.id = m.organization_id AND o.tenant_id = m.tenant_id
+        WHERE c.login_identifier_normalized = ?
+          AND c.tenant_id = ?
+          AND c.status = 'active'
+          AND u.status = 'active'
+          AND m.status = 'active'
+          AND o.status = 'active'
+          AND (c.locked_until IS NULL OR c.locked_until <= NOW())
+        ORDER BY m.id ASC
+        LIMIT 50`,
+      [input.identifier, PLATFORM_TENANT_ID]
+    );
+    const credential = rows[0];
+    const passwordMatches = credential
+      ? await bcrypt.compare(input.password, credential.password_hash)
+      : await bcrypt.compare(input.password, platformLoginDummyHash);
+    if (!credential || !passwordMatches) {
+      if (credential) {
+        await pool.execute(
+          `UPDATE platform_user_credentials
+              SET failed_attempts = LEAST(failed_attempts + 1, 5),
+                  locked_until = CASE WHEN failed_attempts >= 4 THEN DATE_ADD(NOW(), INTERVAL 15 MINUTE) ELSE locked_until END
+            WHERE id = ? AND status = 'active'`,
+          [credential.credential_id]
+        );
+      }
+      return response.status(401).json({ code: 'AUTH-401', message: 'اطلاعات ورود معتبر نیست یا عضویت این پنل فعال نیست.' });
+    }
+
+    const selection = selectPlatformMembership(rows, input);
+    if (selection.kind === 'not-found') {
+      return response.status(401).json({ code: 'AUTH-401', message: 'اطلاعات ورود معتبر نیست یا عضویت این پنل فعال نیست.' });
+    }
+    if (selection.kind === 'ambiguous') {
+      return response.status(409).json({
+        code: 'AUTH-409',
+        message: 'این حساب برای چند نقش این پنل فعال است؛ نقش ورود را انتخاب کنید.',
+        roles: selection.roles
+      });
+    }
+
+    const membershipRow = selection.membership;
+    await pool.execute(
+      `UPDATE platform_user_credentials
+          SET failed_attempts = 0, locked_until = NULL, last_login_at = NOW()
+        WHERE id = ? AND status = 'active'`,
+      [credential.credential_id]
+    );
+    const account = { id: membershipRow.user_id, tenant_id: membershipRow.tenant_id };
+    const membership = {
+      userId: membershipRow.user_id,
+      membershipId: membershipRow.membership_id,
+      organizationId: membershipRow.organization_id,
+      externalType: membershipRow.external_type,
+      externalId: membershipRow.external_id,
+      role: membershipRow.role
+    };
+    const tokens = await issueLoginTokens(account, membershipRow.role, membership);
+    await writeAudit({
+      actorId: membershipRow.user_id,
+      eventType: 'PlatformUserLoggedIn',
+      subjectType: 'platform_user',
+      subjectId: membershipRow.user_id,
+      payload: { source: 'organization-login', panel: input.panel, organizationId: membershipRow.organization_id, role: membershipRow.role }
+    });
+    return response.json({ ...tokens, user: publicPlatformUser(membershipRow) });
+  } catch (error) {
+    console.error(error);
+    return response.status(503).json({ code: 'AUTH-503', message: 'ورود سازمانی موقتاً در دسترس نیست؛ اتصال سرور را بررسی کنید.' });
+  }
+});
+
 app.post('/api/auth/change-password', platformAuth({ roles: [ROLES.DRIVER, ROLES.COMPANY_Y_OWNER], permission: PERMISSIONS.UPDATE }), async (request, response) => {
-  if (!idempotencyKey(request)) return response.status(428).json({ code: 'AUTH-428', message: 'برای تغییر رمز عبور X-Idempotency-Key لازم است.' });
+  let key;
+  try {
+    key = resolveIdempotencyKey(request);
+  } catch (error) {
+    const status = Number(error.status || 400);
+    const code = error.code || ERROR_CODES.IDEMPOTENCY_HEADER;
+    return response.status(status).type('application/problem+json').json({
+      type: `https://gomrok.org/problems/${code}`,
+      title: code,
+      status,
+      detail: error.message || 'هدر جلوگیری از تکرار معتبر نیست.',
+      code,
+      correlationId: request.correlationId
+    });
+  }
+  if (!key) return response.status(428).json({ code: 'AUTH-428', message: 'برای تغییر رمز عبور Idempotency-Key یا X-Idempotency-Key لازم است.' });
   const currentPassword = String(request.body?.currentPassword || '');
   const newPassword = String(request.body?.newPassword || '');
   if (newPassword.length < 12 || newPassword.length > 256) {
@@ -816,11 +1089,50 @@ app.post('/api/auth/change-password', platformAuth({ roles: [ROLES.DRIVER, ROLES
       return response.status(401).json({ code: 'AUTH-401', message: 'رمز عبور فعلی معتبر نیست.' });
     }
     if (await bcrypt.compare(newPassword, account.password_hash)) return response.status(400).json({ code: 'AUTH-423', message: 'رمز عبور جدید باید با رمز قبلی متفاوت باشد.' });
-    await pool.execute(`UPDATE ${table} SET password_hash = ? WHERE id = ? AND tenant_id = ?`, [await bcrypt.hash(newPassword, 12), account.id, request.actor.tenantId]);
-    await pool.execute(`UPDATE platform_refresh_tokens SET revoked_at = NOW() WHERE tenant_id = ? AND user_id = ? AND revoked_at IS NULL`, [request.actor.tenantId, request.actor.userId]);
-    await writeAudit({ actorId: request.actor.userId, eventType: 'PasswordChanged', subjectType: accountType, subjectId: account.id, payload: { source: 'platform-account-security' } });
+    const nextPasswordHash = await bcrypt.hash(newPassword, 12);
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [updated] = await connection.execute(
+        `UPDATE ${table} SET password_hash = ? WHERE id = ? AND tenant_id = ? AND password_hash = ?`,
+        [nextPasswordHash, account.id, request.actor.tenantId, account.password_hash]
+      );
+      if (Number(updated.affectedRows) !== 1) {
+        const conflict = new Error('رمز عبور هم‌زمان تغییر کرده است؛ دوباره وارد شوید.');
+        conflict.code = 'AUTH-409';
+        conflict.status = 409;
+        throw conflict;
+      }
+      await connection.execute(
+        `UPDATE platform_refresh_tokens SET revoked_at = NOW() WHERE tenant_id = ? AND user_id = ? AND revoked_at IS NULL`,
+        [request.actor.tenantId, request.actor.userId]
+      );
+      if (OPERATING_CONTEXT_SESSIONS_ENABLED) {
+        await connection.execute(
+          `UPDATE platform_sessions SET status = 'revoked' WHERE tenant_id = ? AND user_id = ? AND status = 'active'`,
+          [request.actor.tenantId, request.actor.userId]
+        );
+      }
+      await writeAudit({
+        actorId: request.actor.userId,
+        eventType: 'PasswordChanged',
+        subjectType: accountType,
+        subjectId: account.id,
+        payload: { source: 'platform-account-security' },
+        executor: connection
+      });
+      await connection.commit();
+    } catch (error) {
+      try { await connection.rollback(); } catch (_rollbackError) { /* Preserve the original error. */ }
+      throw error;
+    } finally {
+      connection.release();
+    }
     return response.json({ message: 'رمز عبور تغییر کرد؛ برای دریافت نشست جدید دوباره وارد شوید.' });
   } catch (error) {
+    if (error?.code === 'AUTH-409') {
+      return response.status(409).json({ code: 'AUTH-409', message: error.message });
+    }
     console.error(error);
     return response.status(503).json({ code: 'AUTH-503', message: 'تغییر رمز عبور موقتاً در دسترس نیست.' });
   }
@@ -828,7 +1140,12 @@ app.post('/api/auth/change-password', platformAuth({ roles: [ROLES.DRIVER, ROLES
 
 app.use('/api/platform', platformRouter);
 app.use('/api/platform/admin', adminRouter);
+app.use('/api/cargo-inquiries', cargoInquiryRouter);
 
-app.listen(port, '127.0.0.1', () => {
-  console.log(`Gomrok API: http://127.0.0.1:${port}`);
-});
+export { app };
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  app.listen(port, '127.0.0.1', () => {
+    console.log(`Gomrok API: http://127.0.0.1:${port}`);
+  });
+}

@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { ADMIN_ROLES, PERMISSIONS, ROLES, hasPermission } from '../../shared/contract.js';
 import { assertRulePackInput, assertRulePackTransition, redact } from '../src/routes/admin.routes.js';
 
@@ -27,4 +29,18 @@ test('governance audit redacts commercial and raw contact keys', () => {
   assert.equal(output.reason, 'review');
   assert.equal(output.nested.margin, '[REDACTED_BY_POLICY]');
   assert.equal(output.nested.state, 'OPEN');
+});
+
+test('MariaDB reserved governance column remains quoted in read and write SQL', () => {
+  const routeSource = readFileSync(fileURLToPath(new URL('../src/routes/admin.routes.js', import.meta.url)), 'utf8');
+  assert.ok(routeSource.includes('subject_type, subject_id, \\`signal\\`, severity, score, source'));
+  assert.ok(routeSource.includes('subject_type, subject_id, \\`signal\\`, severity, score, source, state'));
+});
+
+test('admin dashboard exposes legacy registration data through a scoped read model', () => {
+  const routeSource = readFileSync(fileURLToPath(new URL('../src/routes/admin.routes.js', import.meta.url)), 'utf8');
+  assert.match(routeSource, /readLegacyRegistrationReadModel\(pool, tenantId, 8\)/);
+  assert.match(routeSource, /router\.get\('\/legacy-registrations', platformAuth\(\{ roles: \[ROLES\.SUPER_ADMIN\]/);
+  assert.match(routeSource, /legacyDrivers/);
+  assert.match(routeSource, /legacyCarriers/);
 });

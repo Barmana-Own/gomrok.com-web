@@ -199,6 +199,28 @@ CREATE TABLE IF NOT EXISTS platform_users (
   KEY idx_platform_users_tenant_status (tenant_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Platform roles authenticate through a credential record that is separate from
+-- membership/organization data. Credentials are provisioned by the governed IAM
+-- workflow; this table never receives a default password or a client-supplied role.
+CREATE TABLE IF NOT EXISTS platform_user_credentials (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  login_identifier VARCHAR(180) NOT NULL,
+  login_identifier_normalized VARCHAR(180) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'active',
+  failed_attempts INT UNSIGNED NOT NULL DEFAULT 0,
+  locked_until DATETIME NULL,
+  last_login_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_platform_credential_login (tenant_id, login_identifier_normalized),
+  UNIQUE KEY uq_platform_credential_user (tenant_id, user_id),
+  KEY idx_platform_credential_status (tenant_id, status, locked_until)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS organization_memberships (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   tenant_id VARCHAR(64) NOT NULL,
@@ -944,3 +966,438 @@ VALUES
   ('platform', 'GPS_CRITICAL', 'Critical GPS Exception', 'high', 1, 1, JSON_ARRAY('in_app')),
   ('platform', 'POD_INCOMPLETE', 'POD Evidence Incomplete', 'high', 0, 1, JSON_ARRAY('in_app'))
 ON DUPLICATE KEY UPDATE policy_key = VALUES(policy_key);
+
+-- Cargo inquiry module. This DDL is intentionally additive and is not a
+-- production migration by itself; apply it through the approved migration
+-- process after the staging preflight has passed.
+CREATE TABLE IF NOT EXISTS cargo_inquiries (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  public_id CHAR(36) NOT NULL,
+  tenant_id VARCHAR(64) NOT NULL,
+  owner_user_id BIGINT UNSIGNED NULL,
+  owner_org_id VARCHAR(128) NULL,
+  guest_token_hash CHAR(64) NULL,
+  guest_token_encrypted TEXT NULL,
+  guest_access_revoked TINYINT(1) NOT NULL DEFAULT 0,
+  idempotency_key VARCHAR(180) NULL,
+  requester_kind VARCHAR(24) NOT NULL DEFAULT 'person',
+  requester_name VARCHAR(180) NOT NULL,
+  requester_mobile VARCHAR(32) NOT NULL,
+  requester_email VARCHAR(180) NULL,
+  contact_channel VARCHAR(16) NOT NULL DEFAULT 'phone',
+  tracking_code VARCHAR(48) NOT NULL,
+  mode VARCHAR(16) NOT NULL,
+  state VARCHAR(32) NOT NULL DEFAULT 'DRAFT',
+  status VARCHAR(40) NOT NULL DEFAULT 'DRAFT',
+  public_reference VARCHAR(48) NULL,
+  route_type VARCHAR(24) NULL,
+  risk_level VARCHAR(24) NOT NULL DEFAULT 'standard',
+  publication_decision VARCHAR(48) NULL,
+  publication_reason_code VARCHAR(80) NULL,
+  policy_version VARCHAR(80) NULL,
+  currency CHAR(3) NOT NULL DEFAULT 'IRR',
+  declared_total_weight_kg DECIMAL(18,3) NULL,
+  estimated_total_volume_m3 DECIMAL(18,6) NULL,
+  mobile_verified TINYINT(1) NOT NULL DEFAULT 0,
+  active_version_no INT NOT NULL DEFAULT 1,
+  selected_offer_id BIGINT UNSIGNED NULL,
+  payload_json JSON NOT NULL,
+  validation_json JSON NULL,
+  support_response_json JSON NULL,
+  expires_at DATETIME NULL,
+  submitted_at DATETIME NULL,
+  closed_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_inquiry_public_id (public_id),
+  UNIQUE KEY uq_cargo_inquiry_tracking_code (tracking_code),
+  UNIQUE KEY uq_cargo_inquiry_public_reference (public_reference),
+  UNIQUE KEY uq_cargo_inquiry_idempotency (tenant_id, idempotency_key),
+  KEY idx_cargo_inquiry_owner_state (tenant_id, owner_org_id, state, updated_at),
+  KEY idx_cargo_inquiry_guest_token (guest_token_hash),
+  KEY idx_cargo_inquiry_state (tenant_id, state, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_versions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  payload_json JSON NOT NULL,
+  calculation_json JSON NULL,
+  validation_json JSON NULL,
+  changed_by_user_id BIGINT UNSIGNED NULL,
+  idempotency_key VARCHAR(180) NULL,
+  effective_change TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_inquiry_version (inquiry_id, version_no),
+  UNIQUE KEY uq_cargo_inquiry_version_idempotency (inquiry_id, idempotency_key),
+  KEY idx_cargo_inquiry_version_tenant (tenant_id, inquiry_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_publications (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  state VARCHAR(32) NOT NULL DEFAULT 'PUBLISHED',
+  stage_no INT NOT NULL DEFAULT 1,
+  deadline_at DATETIME NOT NULL,
+  candidate_count INT NOT NULL DEFAULT 0,
+  driver_limit INT NOT NULL DEFAULT 100,
+  stop_reason VARCHAR(180) NULL,
+  eligibility_snapshot_json JSON NULL,
+  created_by_user_id BIGINT UNSIGNED NULL,
+  closed_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_publication_version (inquiry_id, version_no),
+  KEY idx_cargo_publication_market (tenant_id, state, deadline_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_offers (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  driver_id BIGINT UNSIGNED NOT NULL,
+  driver_org_id VARCHAR(128) NULL,
+  amount DECIMAL(18,2) NOT NULL,
+  amount_minor BIGINT UNSIGNED NULL,
+  currency CHAR(3) NOT NULL,
+  basis VARCHAR(200) NULL,
+  included_json JSON NULL,
+  excluded_json JSON NULL,
+  components_json JSON NULL,
+  included_services_json JSON NULL,
+  excluded_services_json JSON NULL,
+  conditions VARCHAR(500) NULL,
+  driver_note VARCHAR(600) NULL,
+  vehicle_id BIGINT UNSIGNED NULL,
+  estimated_arrival_minutes INT NULL,
+  loading_included TINYINT(1) NULL,
+  unloading_included TINYINT(1) NULL,
+  quote_version INT NOT NULL DEFAULT 1,
+  valid_until DATETIME NOT NULL,
+  state VARCHAR(24) NOT NULL DEFAULT 'ACTIVE',
+  created_by_user_id BIGINT UNSIGNED NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_offer_driver_version (inquiry_id, version_no, driver_id),
+  KEY idx_cargo_offer_inquiry_version_state (inquiry_id, version_no, state, valid_until),
+  KEY idx_cargo_offer_driver (tenant_id, driver_id, state, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_support_cases (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  assigned_user_id BIGINT UNSIGNED NULL,
+  state VARCHAR(32) NOT NULL DEFAULT 'QUEUED',
+  priority VARCHAR(24) NOT NULL DEFAULT 'normal',
+  sla_due_at DATETIME NULL,
+  next_action_at DATETIME NULL,
+  resolution_code VARCHAR(80) NULL,
+  contact_verified TINYINT(1) NOT NULL DEFAULT 0,
+  response_json JSON NULL,
+  last_contact_at DATETIME NULL,
+  closed_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_support_inquiry (inquiry_id),
+  KEY idx_cargo_support_queue (tenant_id, state, assigned_user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_files (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  owner_user_id BIGINT UNSIGNED NULL,
+  purpose VARCHAR(48) NOT NULL,
+  document_type VARCHAR(64) NULL,
+  original_name VARCHAR(180) NULL,
+  storage_key VARCHAR(500) NULL,
+  file_ref VARCHAR(500) NOT NULL,
+  file_hash CHAR(64) NOT NULL,
+  mime_type VARCHAR(120) NULL,
+  size_bytes BIGINT UNSIGNED NULL,
+  quarantine_state VARCHAR(24) NOT NULL DEFAULT 'QUARANTINED',
+  scan_status VARCHAR(24) NOT NULL DEFAULT 'PENDING',
+  access_scope VARCHAR(24) NOT NULL DEFAULT 'PRIVATE',
+  deleted_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_cargo_file_inquiry (tenant_id, inquiry_id, version_no, purpose),
+  UNIQUE KEY uq_cargo_file_hash (tenant_id, inquiry_id, file_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_events (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  event_name VARCHAR(80) NOT NULL,
+  actor_user_id BIGINT UNSIGNED NULL,
+  actor_role VARCHAR(80) NULL,
+  correlation_id VARCHAR(128) NULL,
+  payload_json JSON NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_cargo_event_inquiry_time (tenant_id, inquiry_id, created_at),
+  KEY idx_cargo_event_name_time (tenant_id, event_name, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_stops (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  sequence_no INT NOT NULL,
+  stop_type VARCHAR(32) NOT NULL,
+  province VARCHAR(80) NULL,
+  city VARCHAR(100) NOT NULL,
+  district VARCHAR(120) NULL,
+  location_type VARCHAR(40) NULL,
+  address_encrypted TEXT NULL,
+  postal_code VARCHAR(24) NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+  contact_name_encrypted TEXT NULL,
+  contact_phone_encrypted TEXT NULL,
+  loading_window_start DATETIME NULL,
+  loading_window_end DATETIME NULL,
+  appointment_required TINYINT(1) NOT NULL DEFAULT 0,
+  dock_available TINYINT(1) NOT NULL DEFAULT 0,
+  forklift_available TINYINT(1) NOT NULL DEFAULT 0,
+  crane_available TINYINT(1) NOT NULL DEFAULT 0,
+  access_restrictions TEXT NULL,
+  estimated_operation_minutes INT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_stop_version_sequence (inquiry_id, version_no, sequence_no),
+  KEY idx_cargo_stop_city (tenant_id, city, stop_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_items (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  cargo_type VARCHAR(80) NULL,
+  description_public TEXT NULL,
+  description_private_encrypted TEXT NULL,
+  condition_code VARCHAR(40) NULL,
+  quantity INT NOT NULL DEFAULT 1,
+  unit_type VARCHAR(40) NULL,
+  packaging_type VARCHAR(40) NULL,
+  weight_gross_kg DECIMAL(18,3) NULL,
+  weight_net_kg DECIMAL(18,3) NULL,
+  is_weight_estimated TINYINT(1) NOT NULL DEFAULT 0,
+  length_cm DECIMAL(14,3) NULL,
+  width_cm DECIMAL(14,3) NULL,
+  height_cm DECIMAL(14,3) NULL,
+  stackable TINYINT(1) NULL,
+  rotatable TINYINT(1) NULL,
+  fragility_level VARCHAR(24) NULL,
+  notes TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_cargo_item_version (tenant_id, inquiry_id, version_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_special_requirements (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  requirement_type VARCHAR(48) NOT NULL,
+  is_selected TINYINT(1) NOT NULL DEFAULT 1,
+  risk_level VARCHAR(24) NOT NULL DEFAULT 'standard',
+  data_json_encrypted JSON NULL,
+  requires_review TINYINT(1) NOT NULL DEFAULT 0,
+  review_status VARCHAR(24) NOT NULL DEFAULT 'PENDING',
+  reviewed_by BIGINT UNSIGNED NULL,
+  reviewed_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_special_version_type (inquiry_id, version_no, requirement_type),
+  KEY idx_cargo_special_review (tenant_id, review_status, requires_review)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_broadcasts (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  driver_id BIGINT UNSIGNED NOT NULL,
+  vehicle_id BIGINT UNSIGNED NULL,
+  match_score DECIMAL(8,4) NULL,
+  eligibility_snapshot_json JSON NULL,
+  sent_at DATETIME NULL,
+  viewed_at DATETIME NULL,
+  responded_at DATETIME NULL,
+  expires_at DATETIME NULL,
+  state VARCHAR(24) NOT NULL DEFAULT 'SENT',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_broadcast_driver_version (inquiry_id, version_no, driver_id),
+  KEY idx_cargo_broadcast_driver (tenant_id, driver_id, state, expires_at),
+  KEY idx_cargo_broadcast_market (tenant_id, inquiry_id, version_no, state)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_offer_revisions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  offer_id BIGINT UNSIGNED NOT NULL,
+  driver_id BIGINT UNSIGNED NOT NULL,
+  quote_version INT NOT NULL,
+  payload_json JSON NOT NULL,
+  changed_by_user_id BIGINT UNSIGNED NULL,
+  change_reason VARCHAR(500) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_offer_revision (offer_id, quote_version),
+  KEY idx_cargo_offer_revision_history (tenant_id, inquiry_id, driver_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_support_quotes (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  support_case_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  base_amount_minor BIGINT UNSIGNED NOT NULL,
+  surcharges_json JSON NULL,
+  discount_minor BIGINT NOT NULL DEFAULT 0,
+  tax_minor BIGINT NOT NULL DEFAULT 0,
+  total_amount_minor BIGINT UNSIGNED NOT NULL,
+  currency CHAR(3) NOT NULL DEFAULT 'IRR',
+  included_services_json JSON NULL,
+  excluded_services_json JSON NULL,
+  valid_until DATETIME NOT NULL,
+  customer_message TEXT NULL,
+  internal_note TEXT NULL,
+  created_by BIGINT UNSIGNED NULL,
+  approved_by BIGINT UNSIGNED NULL,
+  state VARCHAR(24) NOT NULL DEFAULT 'DRAFT',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_support_quote_version (support_case_id, version_no),
+  KEY idx_cargo_support_quote_state (tenant_id, inquiry_id, state, valid_until)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_consents (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  consent_type VARCHAR(64) NOT NULL,
+  accepted TINYINT(1) NOT NULL DEFAULT 0,
+  accepted_by_user_id BIGINT UNSIGNED NULL,
+  accepted_at DATETIME NULL,
+  ip_hash CHAR(64) NULL,
+  user_agent_hash CHAR(64) NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_consent_version_type (inquiry_id, version_no, consent_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_messages (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  sender_user_id BIGINT UNSIGNED NULL,
+  sender_role VARCHAR(80) NOT NULL,
+  body_encrypted TEXT NOT NULL,
+  visibility_scope VARCHAR(24) NOT NULL DEFAULT 'OWNER_SUPPORT',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_cargo_message_inquiry (tenant_id, inquiry_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_notification_deliveries (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NULL,
+  broadcast_id BIGINT UNSIGNED NULL,
+  recipient_user_id BIGINT UNSIGNED NULL,
+  channel VARCHAR(24) NOT NULL,
+  event_name VARCHAR(80) NOT NULL,
+  payload_json JSON NOT NULL,
+  state VARCHAR(24) NOT NULL DEFAULT 'PENDING',
+  provider_reference VARCHAR(180) NULL,
+  failure_code VARCHAR(80) NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  last_attempt_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_cargo_notification_delivery (tenant_id, state, channel, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_risk_reviews (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NOT NULL,
+  version_no INT NOT NULL,
+  review_type VARCHAR(40) NOT NULL,
+  state VARCHAR(24) NOT NULL DEFAULT 'PENDING',
+  reason_code VARCHAR(80) NULL,
+  decision_note TEXT NULL,
+  reviewed_by BIGINT UNSIGNED NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at DATETIME NULL,
+  PRIMARY KEY (id),
+  KEY idx_cargo_risk_review_queue (tenant_id, state, review_type, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_idempotency_keys (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  scope VARCHAR(64) NOT NULL,
+  key_hash CHAR(64) NOT NULL,
+  inquiry_id BIGINT UNSIGNED NULL,
+  response_json JSON NULL,
+  expires_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_idempotency_scope_key (tenant_id, scope, key_hash),
+  KEY idx_cargo_idempotency_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_inquiry_rule_versions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  version_code VARCHAR(80) NOT NULL,
+  rules_json JSON NOT NULL,
+  state VARCHAR(24) NOT NULL DEFAULT 'ACTIVE',
+  created_by BIGINT UNSIGNED NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_rule_version (tenant_id, version_code),
+  KEY idx_cargo_rule_active (tenant_id, state, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cargo_vehicle_capability_rules (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  tenant_id VARCHAR(64) NOT NULL,
+  vehicle_type VARCHAR(80) NOT NULL,
+  capacity_kg DECIMAL(18,3) NULL,
+  usable_volume_m3 DECIMAL(18,6) NULL,
+  max_length_cm DECIMAL(14,3) NULL,
+  max_width_cm DECIMAL(14,3) NULL,
+  max_height_cm DECIMAL(14,3) NULL,
+  body_type VARCHAR(40) NULL,
+  equipment_json JSON NULL,
+  cargo_types_json JSON NULL,
+  state VARCHAR(24) NOT NULL DEFAULT 'ACTIVE',
+  rule_version VARCHAR(80) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_cargo_vehicle_rule (tenant_id, vehicle_type, rule_version),
+  KEY idx_cargo_vehicle_rule_state (tenant_id, state, vehicle_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
