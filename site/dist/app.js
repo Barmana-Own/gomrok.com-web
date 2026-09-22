@@ -473,12 +473,16 @@
     platformCards.forEach(function (card, cardIndex) {
       card.classList.toggle("is-active", cardIndex === platformIndex);
     });
-    if (platformTrack && window.innerWidth > 800) {
-      var distance = platformIndex * (platformTrack.parentElement.clientWidth * .39);
+    if (platformTrack) {
       var direction = document.documentElement.dir === "rtl" ? 1 : -1;
+      var distance;
+      if (window.innerWidth > 800) {
+        distance = platformIndex * (platformTrack.parentElement.clientWidth * .39);
+      } else {
+        var gap = parseFloat(window.getComputedStyle(platformTrack).gap) || 0;
+        distance = platformIndex * (platformTrack.parentElement.clientWidth + gap);
+      }
       platformTrack.style.transform = "translateX(" + (direction * distance) + "px)";
-    } else if (platformCards[platformIndex]) {
-      platformCards[platformIndex].scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest", inline: "start" });
     }
     if (platformPrev) platformPrev.disabled = platformIndex === 0;
     if (platformNext) platformNext.disabled = platformIndex === platformCards.length - 1;

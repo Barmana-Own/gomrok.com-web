@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("./fonts/Vazirmatn-wght.woff2?v=font-fix-20260923") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
   --paper: #f6f6f2;
   --paper-2: #ededeb;
@@ -84,7 +92,7 @@ button { cursor: pointer; }
   backdrop-filter: blur(18px);
 }
 .brand { display: inline-flex; align-items: center; flex: 0 0 auto; }
-.brand-logo { display: block; width: 72px; height: 72px; object-fit: cover; border: 2px solid rgba(157,255,37,.8); border-radius: 50%; box-shadow: 0 8px 22px rgba(2,19,18,.2); }
+.brand-logo { display: block; width: 50px; height: 50px; object-fit: cover; border: 2px solid rgba(157,255,37,.8); border-radius: 50%; box-shadow: 0 8px 22px rgba(2,19,18,.2); }
 .desktop-nav { display: flex; align-items: center; gap: 5px; flex: 1 1 auto; }
 .nav-link, .menu-trigger { padding: 11px 9px; color: rgba(255,255,255,.88); font-size: var(--font-size-navigation); font-weight: var(--font-weight-navigation); line-height: var(--line-height-navigation); letter-spacing: 0; border: 0; background: transparent; white-space: nowrap; }
 .menu-trigger { display: inline-flex; align-items: center; gap: 6px; }
@@ -389,7 +397,7 @@ button { cursor: pointer; }
 .footer-grid { display: grid; grid-template-columns: 1.25fr 1fr 1fr 1.3fr; gap: 36px; margin-top: 237px; }
 .footer-brand-line { display: flex; align-items: center; justify-content: flex-start; gap: 18px; }
 .footer-brand { display: inline-flex; flex: 0 0 auto; color: var(--white); }
-.footer-brand-logo { display: block; width: 92px; height: 92px; object-fit: cover; border: 2px solid rgba(157,255,37,.7); border-radius: 50%; box-shadow: 0 12px 30px rgba(2,19,18,.26); }
+.footer-brand-logo { display: block; width: 50px; height: 50px; object-fit: cover; border: 2px solid rgba(157,255,37,.7); border-radius: 50%; box-shadow: 0 12px 30px rgba(2,19,18,.26); }
 .footer-brand-title { max-width: 190px; color: var(--white); font-size: 1.25rem; font-weight: var(--font-weight-button); line-height: 1.7; }
 .footer-column { display: grid; align-content: start; gap: 11px; }
 .footer-column > a { color: rgba(249,250,246,.82); font-size: var(--font-size-navigation); font-weight: var(--font-weight-navigation); line-height: var(--line-height-navigation); letter-spacing: 0; }
@@ -418,7 +426,7 @@ button { cursor: pointer; }
   body { font-size: .95rem; line-height: 1.9; }
   .site-header { inset: 12px 0 auto; }
   .nav-shell { min-height: 58px; padding: 9px 13px; border-radius: 9px; }
-  .brand-logo { width: 56px; height: 56px; }
+  .brand-logo { width: 50px; height: 50px; }
   .desktop-nav, .header-actions { display: none; }
   .mobile-menu-button { display: block; }
   .hero-scroll { min-height: 300vh; }
@@ -466,7 +474,8 @@ button { cursor: pointer; }
   .platform-tabs::-webkit-scrollbar { display: none; }
   .platform-tab { flex: 0 0 auto; min-height: 50px; padding-inline: 15px; font-size: var(--font-size-label); line-height: var(--line-height-label); }
   .carousel-buttons { align-self: flex-end; }
-  .platform-card, .platform-card:not(.is-active) { flex-basis: 88%; min-height: 500px; }
+  .platform-track { gap: 20px; }
+  .platform-card, .platform-card:not(.is-active) { flex: 0 0 100%; min-width: 100%; min-height: 500px; }
   .platform-card:not(.is-active) .platform-card-copy h3, .platform-card-copy h3 { font-size: 1.15rem; line-height: 1.55; }
   .transport-section { padding-block: 78px 84px; }
   .transport-section .section-heading > .section-lead { margin-top: 24px; }
@@ -497,7 +506,7 @@ button { cursor: pointer; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 46px 22px; margin-top: 85px; }
   .footer-brand-block { grid-column: 1 / -1; }
   .footer-brand-line { justify-content: flex-start; gap: 14px; }
-  .footer-brand-logo { width: 78px; height: 78px; }
+  .footer-brand-logo { width: 50px; height: 50px; }
   .footer-brand-title { max-width: 220px; font-size: 1.05rem; }
   .footer-bottom { flex-direction: column; margin-top: 65px; }
 }
